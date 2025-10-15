@@ -1,0 +1,34 @@
+# LiveKit Server Configuration - Production Ready for Azure
+port: 7880
+bind_addresses: ["0.0.0.0"]  # Critical: Listen on all interfaces for Docker
+
+redis:
+  address: localhost:6379
+  username: ""
+  password: ""
+  db: 0
+
+# API Keys (matching your SIP service)
+keys:
+  API5DcPxqyBDHLr: b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
+
+# RTC Configuration - Enhanced for Azure deployment
+rtc:
+  port_range_start: 50000 
+  port_range_end: 60000
+  use_external_ip: true        # Important for Azure public IP
+  bind_addresses: ["0.0.0.0"]  # Listen on all interfaces
+
+# Production settings
+log_level: info
+log_requests: true
+development: false
+
+# Room settings for SIP integration
+room:
+  auto_create: true
+  enable_recording: false
+
+# Node configuration
+node:
+  ip: "0.0.0.0"

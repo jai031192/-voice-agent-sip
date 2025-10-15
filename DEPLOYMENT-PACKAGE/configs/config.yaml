@@ -1,0 +1,59 @@
+# LiveKit SIP Service Configuration - Production
+# MONKHUB INNOVATIONS PRIVATE LIMITED SIP Provider
+
+log_level: info
+log_requests: true
+
+api_key: d6212ffd426f199fe1759c6370c85155
+api_secret: 6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e
+ws_url: ws://40.81.229.194:7880
+
+redis:
+  address: 40.81.229.194:6379
+  username: ""
+  password: ""
+  db: 0
+
+# SIP Configuration for MONKHUB provider (Production)
+sip_port: 5170  # Match provider destination port
+bind_address: "0.0.0.0"  # Listen on all interfaces
+external_ip: "40.81.229.194"  # Your production server IP
+
+# SIP Authentication for MONKHUB
+sip_username: "00919240908080"
+sip_password: "1234"
+
+health_port: 8080
+prometheus_port: 9090
+
+# RTP Configuration (as per MONKHUB provider: 6000-65531)
+rtp_port: 6000-65531
+rtp_bind_address: "0.0.0.0"
+
+# Audio configuration for MONKHUB (G711 Alaw only)
+audio:
+  sample_rate: 8000
+  channels: 1
+  
+# Timeouts and limits
+timeout:
+  sip_registration: 30s
+  call_setup: 60s
+  
+max_concurrent_calls: 10  # Match your 10 channels
+
+# Security settings
+security:
+  enable_authentication: true
+  max_call_duration: 3600s  # 1 hour max call
+
+# MONKHUB Provider Details (for reference)
+# Customer IP: 40.81.229.194
+# SBC IP: 27.107.220.6 
+# TSI: INT-MU-SBC06-9345
+# DEL No: 9240908080
+# Username: 00919240908080
+# Password: 1234
+# Channels: 10
+# Audio Codec: G711 Alaw only
+# Source Port: 5060 -> Destination Port: 5170

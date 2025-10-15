@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  livekit-sip:
+    build: 
+      context: ../
+      dockerfile: livekit-sip-deployment/Dockerfile
+    container_name: livekit-sip-monkhub-prod
+    restart: unless-stopped
+    network_mode: host  # Use host networking for production
+    environment:
+      - EXTERNAL_IP=40.81.229.194
+      - LIVEKIT_API_KEY=d6212ffd426f199fe1759c6370c85155
+      - LIVEKIT_API_SECRET=6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e
+      - SIP_USERNAME=00919240908080
+      - SIP_PASSWORD=1234
+      - REDIS_URL=redis://40.81.229.194:6379
+      - LIVEKIT_WS_URL=ws://40.81.229.194:7880
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    volumes:
+      - sip_data:/app/data
+
+volumes:
+  sip_data:
+    driver: local
