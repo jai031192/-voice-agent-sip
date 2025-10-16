@@ -1,36 +1,30 @@
-# LiveKit SIP CI/CD Pipeline for Azure Deployment
+# LiveKit SIP CI/CD Pipeline for Azure Production Deployment
 # 
-# This workflow supports both local development and Azure production deployment.
-# Environment detection is based on branch names and workflow dispatch inputs.
+# Simplified deployment pipeline for main branch only
+# Deploys directly to production on Azure Container Apps
 # 
-# Local Environment: Uses localhost, development configs
-# Azure Environment: Uses production IPs, managed services
+# Production Configuration:
+# - Server IP: 40.81.229.194
+# - MONKHUB SIP Provider: 00919240908080
+# - Azure Container App: va-cicd
+# - Resource Group: voice-agent-resource-group
 #
 # Required Secrets:
-# - AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID (for Azure auth)
-# - LIVEKIT_API_KEY, LIVEKIT_API_SECRET (for LiveKit configuration)
-# - SIP_USERNAME, SIP_PASSWORD (for MONKHUB provider)
-# - AZURE_EXTERNAL_IP (production external IP: 40.81.229.194)
-# - REGISTRY_USERNAME, REGISTRY_PASSWORD (for container registry)
+# - AZURE_CLIENT_ID, AZURE_TENANT_ID (for Azure authentication)
+# - LIVEKIT_API_KEY: d6212ffd426f199fe1759c6370c85155
+# - LIVEKIT_API_SECRET: 6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e
+# - SIP_USERNAME: 00919240908080
+# - SIP_PASSWORD: 1234
 
 name: LiveKit SIP CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop, feature/*]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
     inputs:
-      deploy_environment:
-        description: 'Target deployment environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - development
-          - staging
-          - production
       skip_tests:
         description: 'Skip test execution'
         required: false
@@ -38,9 +32,12 @@ on:
         type: boolean
 
 env:
-  REGISTRY: ghcr.io
+  REGISTRY: voiceagent.azurecr.io
   IMAGE_NAME: livekit-sip-service
   GO_VERSION: '1.24'
+  AZURE_SUBSCRIPTION_ID: '00c9672f-2264-4555-a212-f212d309f897'
+  AZURE_RESOURCE_GROUP: 'voice-agent-resource-group'
+  AZURE_CONTAINER_APP: 'va-cicd'
 
 # Required for OIDC authentication with Azure
 permissions:
@@ -50,53 +47,22 @@ permissions:
 
 jobs:
   # ==============================================================================
-  # ENVIRONMENT DETECTION & SETUP
+  # ENVIRONMENT SETUP (Simplified for main branch only)
   # ==============================================================================
   setup:
     name: Environment Setup
     runs-on: ubuntu-latest
     outputs:
-      environment: ${{ steps.env.outputs.environment }}
-      deploy: ${{ steps.env.outputs.deploy }}
-      external_ip: ${{ steps.env.outputs.external_ip }}
-      config_file: ${{ steps.env.outputs.config_file }}
+      environment: production
+      deploy: true
+      external_ip: 40.81.229.194
+      config_file: config.yaml
     steps:
-      - name: Determine Environment
-        id: env
+      - name: Set Production Environment
         run: |
-          # Environment detection logic
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            ENV="${{ inputs.deploy_environment }}"
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            ENV="production"
-          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            ENV="staging"
-          else
-            ENV="development"
-          fi
-          
-          echo "environment=$ENV" >> $GITHUB_OUTPUT
-          
-          # Set deployment flag and configuration
-          case "$ENV" in
-            production)
-              echo "deploy=true" >> $GITHUB_OUTPUT
-              echo "external_ip=${{ secrets.AZURE_EXTERNAL_IP }}" >> $GITHUB_OUTPUT
-              echo "config_file=config-production.yaml" >> $GITHUB_OUTPUT
-              ;;
-            staging)
-              echo "deploy=true" >> $GITHUB_OUTPUT
-              echo "external_ip=${{ secrets.STAGING_EXTERNAL_IP }}" >> $GITHUB_OUTPUT
-              echo "config_file=config-staging.yaml" >> $GITHUB_OUTPUT
-              ;;
-            *)
-              echo "deploy=false" >> $GITHUB_OUTPUT
-              echo "external_ip=localhost" >> $GITHUB_OUTPUT
-              echo "config_file=config.yaml" >> $GITHUB_OUTPUT
-              ;;
-          esac
-          
-          echo "Detected environment: $ENV"
+          echo "Deploying to production from main branch"
+          echo "External IP: 40.81.229.194"
+          echo "Target: Azure Container Apps"
 
   # ==============================================================================
   # CODE QUALITY & SECURITY
@@ -385,56 +351,12 @@ jobs:
   # ==============================================================================
   # DEPLOY TO STAGING
   # ==============================================================================
-  deploy-staging:
-    name: Deploy to Staging
-    runs-on: ubuntu-latest
-    needs: [setup, docker, security-scan]
-    if: needs.setup.outputs.environment == 'staging'
-    environment: staging
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy to Azure Container Apps (Staging)
-        run: |
-          az containerapp update \
-            --name livekit-sip-staging \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            --set-env-vars \
-              EXTERNAL_IP="${{ secrets.STAGING_EXTERNAL_IP }}" \
-              LIVEKIT_API_KEY="${{ secrets.LIVEKIT_API_KEY }}" \
-              LIVEKIT_API_SECRET="${{ secrets.LIVEKIT_API_SECRET }}" \
-              SIP_USERNAME="${{ secrets.SIP_USERNAME }}" \
-              SIP_PASSWORD="${{ secrets.SIP_PASSWORD }}"
-
-      - name: Wait for deployment
-        run: |
-          echo "Waiting for staging deployment to be ready..."
-          sleep 60
-
-      - name: Health check staging
-        run: |
-          STAGING_URL="https://livekit-sip-staging.azurecontainerapps.io"
-          curl -f $STAGING_URL/health || exit 1
-          echo "Staging deployment successful!"
-
-  # ==============================================================================
-  # DEPLOY TO PRODUCTION
+  # DEPLOY TO PRODUCTION (Main Branch Only)
   # ==============================================================================
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [setup, docker, security-scan]
-    if: needs.setup.outputs.environment == 'production'
     environment: production
     
     steps:
@@ -446,30 +368,31 @@ jobs:
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Create backup of current deployment
         run: |
           # Get current revision for rollback capability
           CURRENT_REVISION=$(az containerapp revision list \
-            --name livekit-sip-prod \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --query '[0].name' -o tsv)
+            --name ${{ env.AZURE_CONTAINER_APP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query '[0].name' -o tsv 2>/dev/null || echo "none")
           echo "BACKUP_REVISION=$CURRENT_REVISION" >> $GITHUB_ENV
 
-      - name: Deploy to Azure Container Apps (Production)
+      - name: Deploy to Azure Container Apps
         run: |
-          # Blue-green deployment using revision management
           az containerapp update \
-            --name livekit-sip-prod \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --name ${{ env.AZURE_CONTAINER_APP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
             --set-env-vars \
-              EXTERNAL_IP="${{ secrets.AZURE_EXTERNAL_IP }}" \
+              EXTERNAL_IP="40.81.229.194" \
               LIVEKIT_API_KEY="${{ secrets.LIVEKIT_API_KEY }}" \
               LIVEKIT_API_SECRET="${{ secrets.LIVEKIT_API_SECRET }}" \
               SIP_USERNAME="${{ secrets.SIP_USERNAME }}" \
               SIP_PASSWORD="${{ secrets.SIP_PASSWORD }}" \
+              REDIS_URL="redis://40.81.229.194:6379" \
+              LIVEKIT_WS_URL="ws://40.81.229.194:7880" \
             --revision-suffix ${{ github.sha }}
 
       - name: Health check production
@@ -479,13 +402,10 @@ jobs:
           sleep 90
           
           # Test production endpoints
-          PROD_IP="${{ secrets.AZURE_EXTERNAL_IP }}"
+          PROD_IP="40.81.229.194"
           
           # Test health endpoint
           curl -f http://$PROD_IP:8080/health || exit 1
-          
-          # Test LiveKit API
-          curl -f http://$PROD_IP:7880 || exit 1
           
           # Test SIP port (basic connectivity)
           nc -z $PROD_IP 5170 || exit 1
@@ -495,36 +415,14 @@ jobs:
       - name: Rollback on failure
         if: failure() && steps.health_check.outcome == 'failure'
         run: |
-          echo "Health check failed, rolling back to previous revision..."
-          az containerapp revision set-active \
-            --name livekit-sip-prod \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --revision-name ${{ env.BACKUP_REVISION }}
+          if [ "${{ env.BACKUP_REVISION }}" != "none" ]; then
+            echo "Health check failed, rolling back to previous revision..."
+            az containerapp revision set-active \
+              --name ${{ env.AZURE_CONTAINER_APP }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --revision-name ${{ env.BACKUP_REVISION }}
+          fi
           exit 1
-
-      - name: Update traffic allocation
-        if: success()
-        run: |
-          # Gradually shift traffic to new revision
-          NEW_REVISION="livekit-sip-prod--${{ github.sha }}"
-          
-          # Set 100% traffic to new revision after successful health check
-          az containerapp ingress traffic set \
-            --name livekit-sip-prod \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --traffic-weight $NEW_REVISION=100
-
-      - name: Cleanup old revisions
-        run: |
-          # Keep only the 3 most recent revisions
-          az containerapp revision list \
-            --name livekit-sip-prod \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --query '[3:].name' -o tsv | \
-          xargs -I {} az containerapp revision deactivate \
-            --name livekit-sip-prod \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --revision-name {}
 
   # ==============================================================================
   # POST-DEPLOYMENT TESTING
@@ -532,8 +430,8 @@ jobs:
   post-deployment-tests:
     name: Post-Deployment Tests
     runs-on: ubuntu-latest
-    needs: [setup, deploy-staging, deploy-production]
-    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    needs: [setup, deploy-production]
+    if: always() && needs.deploy-production.result == 'success'
     
     steps:
       - name: Checkout code
