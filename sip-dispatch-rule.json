@@ -1,0 +1,11 @@
+{
+  "name": "MONKHUB Dispatch Rule",
+  "metadata": "provider=MONKHUB INNOVATIONS,del_number=9240908080,target_room=monkhub-sip-room",
+  "rule": {
+    "dispatch_rule_direct": {
+      "room_name": "monkhub-sip-room",
+      "pin": ""
+    }
+  },
+  "trunk_ids": ["ST_RtkH6pAP8mBK"]
+}

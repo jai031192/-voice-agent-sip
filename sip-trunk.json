@@ -1,0 +1,9 @@
+{
+  "trunk": {
+    "name": "MONKHUB SIP Trunk",
+    "numbers": ["9240908080"],
+    "auth_username": "00919240908080",
+    "auth_password": "1234",
+    "metadata": "provider=MONKHUB INNOVATIONS PRIVATE LIMITED,circle=MUMBAI,tsi=INT-MU-SBC06-9345,customer_ip=40.81.229.194,sbc_ip=27.107.220.6,channels=10,codec=G711 Alaw"
+  }
+}

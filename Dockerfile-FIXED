@@ -1,0 +1,112 @@
+# ---------- BUILD STAGE ----------
+FROM golang:1.24-bullseye AS builder
+ 
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libopus-dev \
+    libopusfile-dev \
+    libsoxr0 libsoxr-dev \
+    libsamplerate0-dev \
+    git \
+    jq \
+    wget \
+    curl \
+    bash \
+&& rm -rf /var/lib/apt/lists/*
+ 
+# Set working directory
+WORKDIR /app
+ 
+# Install LiveKit CLI
+RUN curl -sSL https://get.livekit.io/cli | bash
+ 
+# Copy Go module files and download dependencies
+COPY go.mod ./
+RUN go mod download || true
+ 
+# Copy source code
+COPY . .
+ 
+# Build the SIP binary
+WORKDIR /app/sip
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags '-w -s' \
+    -o /app/sip-app ./cmd/livekit-sip
+ 
+# Make binaries executable
+RUN chmod +x /app/sip-app
+ 
+# ---------- RUNTIME STAGE ----------
+FROM ubuntu:24.04
+ 
+# Install runtime dependencies + Redis
+RUN apt-get update && apt-get install -y \
+    opus-tools \
+    libopus-dev \
+    libopusfile-dev \
+    libsoxr0 \
+    libsamplerate0 \
+    redis-server \
+    ca-certificates \
+    tzdata \
+    wget \
+    curl \
+    bash \
+    supervisor \
+&& rm -rf /var/lib/apt/lists/*
+ 
+# Create a non-root user
+RUN groupadd -g 1001 livekit && useradd -u 1001 -g livekit -m livekit
+ 
+# Set working directory
+WORKDIR /app
+ 
+# Copy SIP binary from builder
+COPY --from=builder /app/sip-app /app/sip-app
+ 
+# Copy config files
+COPY configs/config.yaml /app/config.yaml
+COPY configs/livekit-config.yaml /app/livekit-config.yaml
+ 
+# Create supervisor config to manage multiple services
+RUN mkdir -p /etc/supervisor/conf.d
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+user=root
+ 
+[program:redis]
+command=redis-server --bind 0.0.0.0 --port 6379
+user=redis
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/redis.log
+stderr_logfile=/var/log/redis.log
+ 
+[program:sip]
+command=/app/sip-app --config /app/config.yaml
+user=livekit
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/sip.log
+stderr_logfile=/var/log/sip.log
+environment=EXTERNAL_IP="40.81.229.194",LIVEKIT_API_KEY="d6212ffd426f199fe1759c6370c85155",LIVEKIT_API_SECRET="6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e",SIP_USERNAME="00919240908080",SIP_PASSWORD="1234"
+EOF
+ 
+# Make binaries executable
+RUN chmod +x /app/sip-app
+ 
+# Create redis user for Redis service
+RUN useradd -r -s /bin/false redis
+ 
+# Expose ports
+EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
+ 
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+ 
+# Use supervisor to manage multiple services
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

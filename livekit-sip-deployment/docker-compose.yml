@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  livekit-sip:
+    build: 
+      context: ../
+      dockerfile: livekit-sip-deployment/Dockerfile
+    container_name: livekit-sip-monkhub
+    restart: unless-stopped
+    network_mode: host  # Use host networking - solves IP issues
+    environment:
+      - EXTERNAL_IP=40.81.229.194  # Your Azure static IP
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    volumes:
+      - sip_data:/app/data  # Optional: for persistent data
+
+volumes:
+  sip_data:
+    driver: local

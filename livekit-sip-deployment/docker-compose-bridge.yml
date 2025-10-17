@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: livekit-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - livekit-network
+    command: redis-server --bind 0.0.0.0 --protected-mode no
+
+  livekit-server:
+    image: livekit/livekit-server:latest
+    container_name: livekit-server
+    restart: unless-stopped
+    ports:
+      - "7880:7880"
+      - "50000-50100:50000-50100/udp"
+    environment:
+      - LIVEKIT_CONFIG=/etc/livekit-config.yaml
+    volumes:
+      - ./livekit-config-bridge.yaml:/etc/livekit-config.yaml
+    networks:
+      - livekit-network
+    depends_on:
+      - redis
+
+  livekit-sip:
+    build: 
+      context: ../
+      dockerfile: livekit-sip-deployment/Dockerfile-bridge
+    container_name: livekit-sip-monkhub
+    restart: unless-stopped
+    ports:
+      - "5170:5170/tcp"
+      - "5170:5170/udp"
+      - "8080:8080/tcp"
+      - "6000-6100:6000-6100/udp"
+    environment:
+      - EXTERNAL_IP=40.81.229.194
+      - REDIS_HOST=redis
+      - LIVEKIT_HOST=livekit-server
+    volumes:
+      - ./config-bridge.yaml:/app/config.yaml
+      - sip_data:/app/data
+    networks:
+      - livekit-network
+    depends_on:
+      - redis
+      - livekit-server
+
+volumes:
+  sip_data:
+    driver: local
+
+networks:
+  livekit-network:
+    driver: bridge

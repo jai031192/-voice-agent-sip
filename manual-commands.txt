@@ -1,0 +1,73 @@
+# Manual Commands - Run these one by one on your server (40.81.229.194)
+
+# Step 1: Check and stop current containers
+docker ps
+docker stop $(docker ps -q)  # Stops all running containers
+docker system prune -f       # Clean up
+
+# Step 2: Create the docker-compose file manually
+nano docker-compose-fixed.yml
+
+# Copy and paste this content into the file:
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: voice-agent-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --bind 0.0.0.0
+    volumes:
+      - redis_data:/data
+
+  livekit-sip:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: livekit-sip-monkhub-prod
+    restart: unless-stopped
+    ports:
+      - "5170:5170/udp"
+      - "8080:8080/tcp"
+      - "9090:9090/tcp"
+      - "6000-65531:6000-65531/udp"
+    environment:
+      - EXTERNAL_IP=40.81.229.194
+      - LIVEKIT_API_KEY=d6212ffd426f199fe1759c6370c85155
+      - LIVEKIT_API_SECRET=6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e
+      - SIP_USERNAME=00919240908080
+      - SIP_PASSWORD=1234
+      - REDIS_URL=redis://redis:6379
+      - LIVEKIT_WS_URL=ws://40.81.229.194:7880
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+volumes:
+  redis_data:
+    driver: local
+
+# Save and exit (Ctrl+X, Y, Enter)
+
+# Step 3: Start the services
+docker-compose -f docker-compose-fixed.yml up -d
+
+# Step 4: Check everything is running
+docker ps
+docker logs voice-agent-redis
+docker logs livekit-sip-monkhub-prod
+
+# Step 5: Test connectivity
+curl http://localhost:8080/health
+redis-cli ping
+netstat -tulpn | grep ':5170\|:6379\|:8080'
+
+# Step 6: Test from external (run this from another machine)
+# curl http://40.81.229.194:8080/health

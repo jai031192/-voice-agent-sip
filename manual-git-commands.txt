@@ -1,0 +1,14 @@
+# Manual Git Commands (Alternative to Script)
+# Replace YOUR_USERNAME with your actual GitHub username
+
+# 1. Update the remote URL
+git remote set-url origin https://github.com/YOUR_USERNAME/voice-agent-sip.git
+
+# 2. Push to your new repository
+git push -u origin main
+
+# 3. Check if it worked
+git remote -v
+
+# Example with a real username:
+# git remote set-url origin https://github.com/john123/voice-agent-sip.git

@@ -477,7 +477,7 @@ jobs:
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [setup, deploy-staging, deploy-production, post-deployment-tests]
+    needs: [setup, deploy-production, post-deployment-tests]
     if: always()
     
     steps:
@@ -485,9 +485,6 @@ jobs:
         run: |
           if [[ "${{ needs.deploy-production.result }}" == "success" ]]; then
             echo "STATUS=✅ Production deployment successful" >> $GITHUB_ENV
-            echo "COLOR=good" >> $GITHUB_ENV
-          elif [[ "${{ needs.deploy-staging.result }}" == "success" ]]; then
-            echo "STATUS=✅ Staging deployment successful" >> $GITHUB_ENV
             echo "COLOR=good" >> $GITHUB_ENV
           else
             echo "STATUS=❌ Deployment failed" >> $GITHUB_ENV
