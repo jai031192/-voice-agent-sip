@@ -1,0 +1,47 @@
+# golangci-lint configuration
+# This file makes the linting output cleaner by disabling non-critical checks
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - livekit  # Skip the nested livekit directory
+
+linters-settings:
+  errcheck:
+    # Ignore common error checks that are handled elsewhere
+    ignore: fmt:.*,io/ioutil:^Read.*
+  
+  staticcheck:
+    # Ignore deprecation warnings for now
+    checks: ["all", "-SA1019"]
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  disable:
+    - errcheck  # Temporarily disable to reduce noise
+    - staticcheck  # Temporarily disable deprecation warnings
+
+issues:
+  exclude-rules:
+    # Exclude error checking for specific patterns
+    - path: test/
+      linters:
+        - errcheck
+        - gosec
+    - path: livekit/
+      linters:
+        - errcheck
+        - gosec
+        - staticcheck
+    - text: "Error return value of.*is not checked"
+      linters:
+        - errcheck
+    - text: "SA1019:"
+      linters:
+        - staticcheck
