@@ -25,8 +25,6 @@ import (
 	"sync"
 )
 
-const testing = false // do not allow import of testing package
-
 // TB mirrors testing.TB interface without including the actual testing package.
 type TB interface {
 	Failed() bool

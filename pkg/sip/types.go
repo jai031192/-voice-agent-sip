@@ -215,18 +215,6 @@ func getFromTag(r *sip.Request) (RemoteTag, error) {
 	return tag, nil
 }
 
-func getToTag(r *sip.Response) (RemoteTag, error) {
-	to := r.To()
-	if to == nil {
-		return "", errors.New("no To on Response")
-	}
-	tag, ok := getTagFrom(to.Params)
-	if !ok {
-		return "", errors.New("no tag in To on Response")
-	}
-	return tag, nil
-}
-
 func getTagFrom(params sip.HeaderParams) (RemoteTag, bool) {
 	tag, ok := params["tag"]
 	if !ok {
