@@ -322,7 +322,6 @@ jobs:
             libopusfile-dev \
             libsoxr-dev \
             libsamplerate0-dev \
-            libresolv-dev \
             libpthread-stubs0-dev
           
           # Verify libraries are installed
