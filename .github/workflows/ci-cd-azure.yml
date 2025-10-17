@@ -116,8 +116,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
         continue-on-error: true
-          restore-keys: |
-            ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: |
