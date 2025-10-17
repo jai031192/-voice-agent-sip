@@ -311,20 +311,30 @@ jobs:
 
       - name: Install build dependencies
         run: |
+          # Install all required C libraries and development packages
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
             pkg-config \
+            gcc \
+            libc6-dev \
             libopus-dev \
             libopusfile-dev \
             libsoxr-dev \
-            libsamplerate0-dev
+            libsamplerate0-dev \
+            libresolv-dev \
+            libpthread-stubs0-dev
+          
+          # Verify libraries are installed
+          pkg-config --exists opus || echo "opus not found"
+          pkg-config --exists soxr || echo "soxr not found"
+          pkg-config --libs opus soxr
 
       - name: Build binary
         run: |
-          # Build static binary for production
+          # Build dynamically linked binary (more reliable than static)
           CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-          go build -a -ldflags '-linkmode external -extldflags "-static"' \
+          go build -a -ldflags '-w -s' \
           -o sip-service ./cmd/livekit-sip
 
       - name: Test binary
@@ -397,15 +407,18 @@ jobs:
 
       - name: Prepare build context
         run: |
-          # Copy deployment configs to build context
-          cp livekit-sip-deployment/Dockerfile .
-          cp livekit-sip-deployment/config.yaml ./config-production.yaml
-          cp livekit-sip-deployment/livekit-config.yaml .
+          # Use the fixed Dockerfile with proper C library dependencies
+          cp Dockerfile-FIXED ./Dockerfile
+          
+          # Create configs directory and copy deployment configs
+          mkdir -p configs
+          cp livekit-sip-deployment/config.yaml ./configs/config.yaml
+          cp livekit-sip-deployment/livekit-config.yaml ./configs/livekit-config.yaml
           
           # Update config for environment
-          sed -i "s/localhost:6379/redis:6379/g" config-production.yaml
-          sed -i "s/localhost:7880/localhost:7880/g" config-production.yaml
-          sed -i "s/external_ip: .*/external_ip: \"${{ needs.setup.outputs.external_ip }}\"/g" config-production.yaml
+          sed -i "s/localhost:6379/redis:6379/g" configs/config.yaml
+          sed -i "s/localhost:7880/localhost:7880/g" configs/config.yaml
+          sed -i "s/external_ip: .*/external_ip: \"${{ needs.setup.outputs.external_ip }}\"/g" configs/config.yaml
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
