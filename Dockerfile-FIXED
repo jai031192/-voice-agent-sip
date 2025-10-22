@@ -1,5 +1,9 @@
 # ---------- BUILD STAGE ----------
 FROM golang:1.24-bullseye AS builder
+
+# Cache bust argument - change this to force rebuild
+ARG CACHEBUST=1
+RUN echo "Build timestamp: $(date)" 
  
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -70,52 +74,61 @@ COPY config.yaml /app/config.yaml
 COPY livekit-config.yaml /app/livekit-config.yaml
  
 # Create supervisor config to manage multiple services
-RUN mkdir -p /etc/supervisor/conf.d /var/log
+RUN mkdir -p /etc/supervisor/conf.d /var/log /var/run
 
-# Create main supervisor configuration file
-RUN cat > /etc/supervisor/supervisord.conf << 'EOF'
-[unix_http_server]
-file=/var/run/supervisor.sock
-chmod=0700
+# Create main supervisor configuration file with explicit content
+RUN echo '[unix_http_server]' > /etc/supervisor/supervisord.conf && \
+    echo 'file=/var/run/supervisor.sock' >> /etc/supervisor/supervisord.conf && \
+    echo 'chmod=0700' >> /etc/supervisor/supervisord.conf && \
+    echo '' >> /etc/supervisor/supervisord.conf && \
+    echo '[supervisord]' >> /etc/supervisor/supervisord.conf && \
+    echo 'nodaemon=true' >> /etc/supervisor/supervisord.conf && \
+    echo 'user=root' >> /etc/supervisor/supervisord.conf && \
+    echo 'logfile=/var/log/supervisord.log' >> /etc/supervisor/supervisord.conf && \
+    echo 'pidfile=/var/run/supervisord.pid' >> /etc/supervisor/supervisord.conf && \
+    echo 'childlogdir=/var/log' >> /etc/supervisor/supervisord.conf && \
+    echo '' >> /etc/supervisor/supervisord.conf && \
+    echo '[rpcinterface:supervisor]' >> /etc/supervisor/supervisord.conf && \
+    echo 'supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface' >> /etc/supervisor/supervisord.conf && \
+    echo '' >> /etc/supervisor/supervisord.conf && \
+    echo '[supervisorctl]' >> /etc/supervisor/supervisord.conf && \
+    echo 'serverurl=unix:///var/run/supervisor.sock' >> /etc/supervisor/supervisord.conf && \
+    echo '' >> /etc/supervisor/supervisord.conf && \
+    echo '[include]' >> /etc/supervisor/supervisord.conf && \
+    echo 'files = /etc/supervisor/conf.d/*.conf' >> /etc/supervisor/supervisord.conf
 
-[supervisord]
-nodaemon=true
-user=root
-logfile=/var/log/supervisord.log
-pidfile=/var/run/supervisord.pid
+# Create program configuration with explicit content
+RUN echo '[program:redis]' > /etc/supervisor/conf.d/programs.conf && \
+    echo 'command=redis-server --bind 0.0.0.0 --port 6379' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'user=redis' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stdout_logfile=/var/log/redis.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stderr_logfile=/var/log/redis.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo '' >> /etc/supervisor/conf.d/programs.conf && \
+    echo '[program:sip]' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'command=/app/sip-app --config /app/config.yaml' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'user=livekit' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stdout_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stderr_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'environment=EXTERNAL_IP="40.81.229.194",LIVEKIT_API_KEY="d6212ffd426f199fe1759c6370c85155",LIVEKIT_API_SECRET="6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e",SIP_USERNAME="00919240908080",SIP_PASSWORD="1234"' >> /etc/supervisor/conf.d/programs.conf
 
-[rpcinterface:supervisor]
-supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
-
-[supervisorctl]
-serverurl=unix:///var/run/supervisor.sock
-
-[include]
-files = /etc/supervisor/conf.d/*.conf
-EOF
-
-# Create program configuration
-RUN cat > /etc/supervisor/conf.d/programs.conf << 'EOF'
-[program:redis]
-command=redis-server --bind 0.0.0.0 --port 6379
-user=redis
-autostart=true
-autorestart=true
-stdout_logfile=/var/log/redis.log
-stderr_logfile=/var/log/redis.log
-
-[program:sip]
-command=/app/sip-app --config /app/config.yaml
-user=livekit
-autostart=true
-autorestart=true
-stdout_logfile=/var/log/sip.log
-stderr_logfile=/var/log/sip.log
-environment=EXTERNAL_IP="40.81.229.194",LIVEKIT_API_KEY="d6212ffd426f199fe1759c6370c85155",LIVEKIT_API_SECRET="6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e",SIP_USERNAME="00919240908080",SIP_PASSWORD="1234"
-EOF
+# Verify configuration files were created correctly and set permissions
+RUN ls -la /etc/supervisor/ && \
+    ls -la /etc/supervisor/conf.d/ && \
+    cat /etc/supervisor/supervisord.conf && \
+    echo "--- Programs Config ---" && \
+    cat /etc/supervisor/conf.d/programs.conf && \
+    chmod 644 /etc/supervisor/supervisord.conf /etc/supervisor/conf.d/programs.conf
  
 # Make binaries executable
 RUN chmod +x /app/sip-app
+
+# Test supervisor configuration to catch errors early
+RUN /usr/bin/supervisord -c /etc/supervisor/supervisord.conf -t && \
+    echo "Supervisor configuration test passed successfully"
  
 # Expose ports
 EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
