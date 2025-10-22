@@ -70,14 +70,32 @@ COPY config.yaml /app/config.yaml
 COPY livekit-config.yaml /app/livekit-config.yaml
  
 # Create supervisor config to manage multiple services
-RUN mkdir -p /etc/supervisor/conf.d
+RUN mkdir -p /etc/supervisor/conf.d /var/log
 
-# Create supervisor configuration file
-RUN cat > /etc/supervisor/conf.d/supervisord.conf << 'EOF'
+# Create main supervisor configuration file
+RUN cat > /etc/supervisor/supervisord.conf << 'EOF'
+[unix_http_server]
+file=/var/run/supervisor.sock
+chmod=0700
+
 [supervisord]
 nodaemon=true
 user=root
+logfile=/var/log/supervisord.log
+pidfile=/var/run/supervisord.pid
 
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor.sock
+
+[include]
+files = /etc/supervisor/conf.d/*.conf
+EOF
+
+# Create program configuration
+RUN cat > /etc/supervisor/conf.d/programs.conf << 'EOF'
 [program:redis]
 command=redis-server --bind 0.0.0.0 --port 6379
 user=redis
@@ -107,4 +125,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
  
 # Use supervisor to manage multiple services
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
