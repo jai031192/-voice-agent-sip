@@ -71,11 +71,13 @@ COPY livekit-config.yaml /app/livekit-config.yaml
  
 # Create supervisor config to manage multiple services
 RUN mkdir -p /etc/supervisor/conf.d
-COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+
+# Create supervisor configuration file
+RUN cat > /etc/supervisor/conf.d/supervisord.conf << 'EOF'
 [supervisord]
 nodaemon=true
 user=root
- 
+
 [program:redis]
 command=redis-server --bind 0.0.0.0 --port 6379
 user=redis
@@ -83,7 +85,7 @@ autostart=true
 autorestart=true
 stdout_logfile=/var/log/redis.log
 stderr_logfile=/var/log/redis.log
- 
+
 [program:sip]
 command=/app/sip-app --config /app/config.yaml
 user=livekit

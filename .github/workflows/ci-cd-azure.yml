@@ -411,13 +411,12 @@ jobs:
           # Use the fixed Dockerfile with proper C library dependencies
           cp Dockerfile-FIXED ./Dockerfile
           
-          # Create configs directory and copy deployment configs
-          mkdir -p configs
-          cp livekit-sip-deployment/config.yaml ./configs/config.yaml
-          cp livekit-sip-deployment/livekit-config.yaml ./configs/livekit-config.yaml
+          # Copy config files to root directory (matching Dockerfile paths)
+          cp config.yaml ./config.yaml
+          cp livekit-config.yaml ./livekit-config.yaml
           
           # Update config for environment
-          sed -i "s/localhost:6379/redis:6379/g" configs/config.yaml
+          sed -i "s/localhost:6379/redis:6379/g" config.yaml
           sed -i "s/localhost:7880/localhost:7880/g" configs/config.yaml
           sed -i "s/external_ip: .*/external_ip: \"${{ needs.setup.outputs.external_ip }}\"/g" configs/config.yaml
 
