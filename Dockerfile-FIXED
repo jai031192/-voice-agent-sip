@@ -66,8 +66,8 @@ WORKDIR /app
 COPY --from=builder /app/sip-app /app/sip-app
  
 # Copy config files
-COPY configs/config.yaml /app/config.yaml
-COPY configs/livekit-config.yaml /app/livekit-config.yaml
+COPY config.yaml /app/config.yaml
+COPY livekit-config.yaml /app/livekit-config.yaml
  
 # Create supervisor config to manage multiple services
 RUN mkdir -p /etc/supervisor/conf.d
