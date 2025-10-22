@@ -97,9 +97,6 @@ EOF
 # Make binaries executable
 RUN chmod +x /app/sip-app
  
-# Create redis user for Redis service
-RUN useradd -r -s /bin/false redis
- 
 # Expose ports
 EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
  
