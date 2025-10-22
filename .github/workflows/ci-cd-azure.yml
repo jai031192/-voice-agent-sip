@@ -36,7 +36,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/livekit-sip-service
+  IMAGE_NAME: jairathore29/livekit-sip-service
   GO_VERSION: '1.24'
   AZURE_SUBSCRIPTION_ID: '00c9672f-2264-4555-a212-f212d309f897'
   AZURE_RESOURCE_GROUP: 'voice-agent-resource-group'
