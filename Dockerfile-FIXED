@@ -126,9 +126,20 @@ RUN ls -la /etc/supervisor/ && \
 # Make binaries executable
 RUN chmod +x /app/sip-app
 
-# Test supervisor configuration to catch errors early
-RUN /usr/bin/supervisord -c /etc/supervisor/supervisord.conf -t && \
-    echo "Supervisor configuration test passed successfully"
+# Test supervisor configuration syntax only (without starting services)
+RUN python3 -c "
+import configparser
+import sys
+# Test main config
+config = configparser.ConfigParser()
+config.read('/etc/supervisor/supervisord.conf')
+assert 'supervisord' in config.sections(), 'Missing supervisord section'
+# Test programs config  
+config.read('/etc/supervisor/conf.d/programs.conf')
+assert 'program:redis' in config.sections(), 'Missing redis program'
+assert 'program:sip' in config.sections(), 'Missing sip program'
+print('Supervisor configuration validation passed successfully')
+"
  
 # Expose ports
 EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
