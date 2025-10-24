@@ -79,7 +79,7 @@ COPY livekit-config.yaml /app/livekit-config.yaml
 RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
-    echo '# Export environment variables for supervisor' >> /app/start.sh && \
+    echo '# Set default environment variables (can be overridden by container runtime)' >> /app/start.sh && \
     echo 'export EXTERNAL_IP=${EXTERNAL_IP:-"40.81.229.194"}' >> /app/start.sh && \
     echo 'export LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-"API5DcPxqyBDHLr"}' >> /app/start.sh && \
     echo 'export LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-"b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"}' >> /app/start.sh && \
@@ -87,7 +87,14 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'export SIP_USERNAME=${SIP_USERNAME:-"00919240908080"}' >> /app/start.sh && \
     echo 'export SIP_PASSWORD=${SIP_PASSWORD:-"1234"}' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
-    echo '# Start supervisor with environment variables' >> /app/start.sh && \
+    echo '# Debug: Show environment variables' >> /app/start.sh && \
+    echo 'echo "Container starting with environment:"' >> /app/start.sh && \
+    echo 'echo "EXTERNAL_IP=$EXTERNAL_IP"' >> /app/start.sh && \
+    echo 'echo "LIVEKIT_API_KEY=$LIVEKIT_API_KEY"' >> /app/start.sh && \
+    echo 'echo "LIVEKIT_WS_URL=$LIVEKIT_WS_URL"' >> /app/start.sh && \
+    echo 'echo "SIP_USERNAME=$SIP_USERNAME"' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo '# Start supervisor (environment variables will be inherited)' >> /app/start.sh && \
     echo 'exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf' >> /app/start.sh && \
     chmod +x /app/start.sh
  
@@ -105,7 +112,6 @@ RUN echo '[unix_http_server]' > /etc/supervisor/supervisord.conf && \
     echo 'logfile=/var/log/supervisord.log' >> /etc/supervisor/supervisord.conf && \
     echo 'pidfile=/var/run/supervisord.pid' >> /etc/supervisor/supervisord.conf && \
     echo 'childlogdir=/var/log' >> /etc/supervisor/supervisord.conf && \
-    echo 'environment=EXTERNAL_IP,LIVEKIT_API_KEY,LIVEKIT_API_SECRET,LIVEKIT_WS_URL,SIP_USERNAME,SIP_PASSWORD' >> /etc/supervisor/supervisord.conf && \
     echo '' >> /etc/supervisor/supervisord.conf && \
     echo '[rpcinterface:supervisor]' >> /etc/supervisor/supervisord.conf && \
     echo 'supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface' >> /etc/supervisor/supervisord.conf && \
