@@ -74,6 +74,22 @@ COPY --from=builder /usr/local/bin/livekit-server /usr/local/bin/livekit-server
 # Copy config files
 COPY config.yaml /app/config.yaml
 COPY livekit-config.yaml /app/livekit-config.yaml
+
+# Create startup script to handle environment variables
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo '# Export environment variables for supervisor' >> /app/start.sh && \
+    echo 'export EXTERNAL_IP=${EXTERNAL_IP:-"40.81.229.194"}' >> /app/start.sh && \
+    echo 'export LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-"API5DcPxqyBDHLr"}' >> /app/start.sh && \
+    echo 'export LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-"b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"}' >> /app/start.sh && \
+    echo 'export LIVEKIT_WS_URL=${LIVEKIT_WS_URL:-"ws://localhost:7880"}' >> /app/start.sh && \
+    echo 'export SIP_USERNAME=${SIP_USERNAME:-"00919240908080"}' >> /app/start.sh && \
+    echo 'export SIP_PASSWORD=${SIP_PASSWORD:-"1234"}' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo '# Start supervisor with environment variables' >> /app/start.sh && \
+    echo 'exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf' >> /app/start.sh && \
+    chmod +x /app/start.sh
  
 # Create supervisor config to manage multiple services
 RUN mkdir -p /etc/supervisor/conf.d /var/log /var/run
@@ -89,6 +105,7 @@ RUN echo '[unix_http_server]' > /etc/supervisor/supervisord.conf && \
     echo 'logfile=/var/log/supervisord.log' >> /etc/supervisor/supervisord.conf && \
     echo 'pidfile=/var/run/supervisord.pid' >> /etc/supervisor/supervisord.conf && \
     echo 'childlogdir=/var/log' >> /etc/supervisor/supervisord.conf && \
+    echo 'environment=EXTERNAL_IP,LIVEKIT_API_KEY,LIVEKIT_API_SECRET,LIVEKIT_WS_URL,SIP_USERNAME,SIP_PASSWORD' >> /etc/supervisor/supervisord.conf && \
     echo '' >> /etc/supervisor/supervisord.conf && \
     echo '[rpcinterface:supervisor]' >> /etc/supervisor/supervisord.conf && \
     echo 'supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface' >> /etc/supervisor/supervisord.conf && \
@@ -122,8 +139,7 @@ RUN echo '[program:redis]' > /etc/supervisor/conf.d/programs.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'stdout_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'stderr_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'environment=EXTERNAL_IP="%(ENV_EXTERNAL_IP)s",LIVEKIT_API_KEY="%(ENV_LIVEKIT_API_KEY)s",LIVEKIT_API_SECRET="%(ENV_LIVEKIT_API_SECRET)s",LIVEKIT_WS_URL="%(ENV_LIVEKIT_WS_URL)s",SIP_USERNAME="%(ENV_SIP_USERNAME)s",SIP_PASSWORD="%(ENV_SIP_PASSWORD)s"' >> /etc/supervisor/conf.d/programs.conf
+    echo 'stderr_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf
 
 # Verify configuration files were created correctly and set permissions
 RUN ls -la /etc/supervisor/ && \
@@ -146,5 +162,5 @@ EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
  
-# Use supervisor to manage multiple services
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+# Use startup script to handle environment variables and start supervisor
+CMD ["/app/start.sh"]
