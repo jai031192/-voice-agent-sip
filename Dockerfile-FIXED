@@ -25,7 +25,10 @@ WORKDIR /app
  
 # Install LiveKit CLI and Server
 RUN curl -sSL https://get.livekit.io/cli | bash
-RUN curl -sSL https://get.livekit.io | bash
+RUN curl -sSL https://get.livekit.io | bash && \
+    ls -la /usr/local/bin/livekit* && \
+    which livekit-server && \
+    livekit-server --version
  
 # Copy Go module files and download dependencies
 COPY go.mod ./
@@ -94,6 +97,13 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'echo "LIVEKIT_WS_URL=$LIVEKIT_WS_URL"' >> /app/start.sh && \
     echo 'echo "SIP_USERNAME=$SIP_USERNAME"' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
+    echo '# Debug: Check binaries before starting supervisor' >> /app/start.sh && \
+    echo 'echo "Checking binaries..."' >> /app/start.sh && \
+    echo 'ls -la /usr/local/bin/livekit-server' >> /app/start.sh && \
+    echo 'ls -la /app/sip-app' >> /app/start.sh && \
+    echo 'echo "Config files:"' >> /app/start.sh && \
+    echo 'ls -la /app/*.yaml' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
     echo '# Start supervisor (environment variables will be inherited)' >> /app/start.sh && \
     echo 'exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf' >> /app/start.sh && \
     chmod +x /app/start.sh
@@ -132,12 +142,15 @@ RUN echo '[program:redis]' > /etc/supervisor/conf.d/programs.conf && \
     echo 'stderr_logfile=/var/log/redis.log' >> /etc/supervisor/conf.d/programs.conf && \
     echo '' >> /etc/supervisor/conf.d/programs.conf && \
     echo '[program:livekit]' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'command=/usr/local/bin/livekit-server --config /app/livekit-config.yaml' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'user=livekit' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'command=/usr/local/bin/livekit-server --config /app/livekit-config.yaml --bind 0.0.0.0' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'user=root' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'stdout_logfile=/var/log/livekit.log' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'stderr_logfile=/var/log/livekit.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stdout_logfile_maxbytes=50MB' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stderr_logfile_maxbytes=50MB' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'startsecs=10' >> /etc/supervisor/conf.d/programs.conf && \
     echo '' >> /etc/supervisor/conf.d/programs.conf && \
     echo '[program:sip]' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'command=/app/sip-app --config /app/config.yaml' >> /etc/supervisor/conf.d/programs.conf && \
@@ -155,8 +168,13 @@ RUN ls -la /etc/supervisor/ && \
     cat /etc/supervisor/conf.d/programs.conf && \
     chmod 644 /etc/supervisor/supervisord.conf /etc/supervisor/conf.d/programs.conf
  
-# Make binaries executable
-RUN chmod +x /app/sip-app /usr/local/bin/livekit-server
+# Make binaries executable and verify they exist
+RUN chmod +x /app/sip-app && \
+    ls -la /app/sip-app && \
+    ls -la /usr/local/bin/livekit-server && \
+    chmod +x /usr/local/bin/livekit-server && \
+    echo "LiveKit server binary check:" && \
+    /usr/local/bin/livekit-server --help | head -5
 
 # Test supervisor configuration syntax only (without starting services)
 RUN python3 -c "import configparser; import sys; config = configparser.ConfigParser(); config.read('/etc/supervisor/supervisord.conf'); assert 'supervisord' in config.sections(), 'Missing supervisord section'; config.read('/etc/supervisor/conf.d/programs.conf'); assert 'program:redis' in config.sections(), 'Missing redis program'; assert 'program:livekit' in config.sections(), 'Missing livekit program'; assert 'program:sip' in config.sections(), 'Missing sip program'; print('Supervisor configuration validation passed successfully')"
