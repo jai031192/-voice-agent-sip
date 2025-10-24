@@ -23,8 +23,9 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
  
-# Install LiveKit CLI
+# Install LiveKit CLI and Server
 RUN curl -sSL https://get.livekit.io/cli | bash
+RUN curl -sSL https://get.livekit.io | bash
  
 # Copy Go module files and download dependencies
 COPY go.mod ./
@@ -66,8 +67,9 @@ RUN groupadd -g 1001 livekit && useradd -u 1001 -g livekit -m livekit
 # Set working directory
 WORKDIR /app
  
-# Copy SIP binary from builder
+# Copy SIP binary and LiveKit server from builder
 COPY --from=builder /app/sip-app /app/sip-app
+COPY --from=builder /usr/local/bin/livekit-server /usr/local/bin/livekit-server
  
 # Copy config files
 COPY config.yaml /app/config.yaml
@@ -106,6 +108,14 @@ RUN echo '[program:redis]' > /etc/supervisor/conf.d/programs.conf && \
     echo 'stdout_logfile=/var/log/redis.log' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'stderr_logfile=/var/log/redis.log' >> /etc/supervisor/conf.d/programs.conf && \
     echo '' >> /etc/supervisor/conf.d/programs.conf && \
+    echo '[program:livekit]' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'command=/usr/local/bin/livekit-server --config /app/livekit-config.yaml' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'user=livekit' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autorestart=true' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stdout_logfile=/var/log/livekit.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stderr_logfile=/var/log/livekit.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo '' >> /etc/supervisor/conf.d/programs.conf && \
     echo '[program:sip]' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'command=/app/sip-app --config /app/config.yaml' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'user=livekit' >> /etc/supervisor/conf.d/programs.conf && \
@@ -124,10 +134,10 @@ RUN ls -la /etc/supervisor/ && \
     chmod 644 /etc/supervisor/supervisord.conf /etc/supervisor/conf.d/programs.conf
  
 # Make binaries executable
-RUN chmod +x /app/sip-app
+RUN chmod +x /app/sip-app /usr/local/bin/livekit-server
 
 # Test supervisor configuration syntax only (without starting services)
-RUN python3 -c "import configparser; import sys; config = configparser.ConfigParser(); config.read('/etc/supervisor/supervisord.conf'); assert 'supervisord' in config.sections(), 'Missing supervisord section'; config.read('/etc/supervisor/conf.d/programs.conf'); assert 'program:redis' in config.sections(), 'Missing redis program'; assert 'program:sip' in config.sections(), 'Missing sip program'; print('Supervisor configuration validation passed successfully')"
+RUN python3 -c "import configparser; import sys; config = configparser.ConfigParser(); config.read('/etc/supervisor/supervisord.conf'); assert 'supervisord' in config.sections(), 'Missing supervisord section'; config.read('/etc/supervisor/conf.d/programs.conf'); assert 'program:redis' in config.sections(), 'Missing redis program'; assert 'program:livekit' in config.sections(), 'Missing livekit program'; assert 'program:sip' in config.sections(), 'Missing sip program'; print('Supervisor configuration validation passed successfully')"
  
 # Expose ports
 EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
