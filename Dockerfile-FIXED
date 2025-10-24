@@ -123,7 +123,7 @@ RUN echo '[program:redis]' > /etc/supervisor/conf.d/programs.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'stdout_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'stderr_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'environment=EXTERNAL_IP="40.81.229.194",LIVEKIT_API_KEY="d6212ffd426f199fe1759c6370c85155",LIVEKIT_API_SECRET="6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e",SIP_USERNAME="00919240908080",SIP_PASSWORD="1234"' >> /etc/supervisor/conf.d/programs.conf
+    echo 'environment=EXTERNAL_IP="%(ENV_EXTERNAL_IP)s",LIVEKIT_API_KEY="%(ENV_LIVEKIT_API_KEY)s",LIVEKIT_API_SECRET="%(ENV_LIVEKIT_API_SECRET)s",LIVEKIT_WS_URL="%(ENV_LIVEKIT_WS_URL)s",SIP_USERNAME="%(ENV_SIP_USERNAME)s",SIP_PASSWORD="%(ENV_SIP_PASSWORD)s"' >> /etc/supervisor/conf.d/programs.conf
 
 # Verify configuration files were created correctly and set permissions
 RUN ls -la /etc/supervisor/ && \

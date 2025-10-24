@@ -3,7 +3,7 @@ port: 7880
 bind_addresses: ["0.0.0.0"]  # Critical: Listen on all interfaces for Docker
 
 redis:
-  address: localhost:6379
+  address: localhost:6379  # Will be overridden by REDIS_URL env var in Azure
   username: ""
   password: ""
   db: 0

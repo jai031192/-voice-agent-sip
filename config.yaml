@@ -7,10 +7,10 @@ log_requests: true
 
 api_key: API5DcPxqyBDHLr
 api_secret: b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
-ws_url: ws://localhost:7880
+ws_url: ws://localhost:7880  # Will be overridden by LIVEKIT_WS_URL env var in Azure
 
 redis:
-  address: localhost:6379
+  address: localhost:6379  # Will be overridden by REDIS_URL env var in Azure
   username: ""
   password: ""
   db: 0
@@ -18,10 +18,10 @@ redis:
 # SIP Configuration for MONKHUB provider
 sip_port: 5170
 bind_address: "0.0.0.0"  # Listen on all interfaces
-external_ip: "0.0.0.0"  # Use all interfaces for testing
+external_ip: "40.81.229.194"  # Azure public IP for SIP provider
 
-health_port: 8081  # Changed to avoid conflict
-prometheus_port: 9091  # Changed to avoid conflict
+health_port: 8080  # Match Azure health check expectations
+prometheus_port: 9090  # Standard port for metrics
 
 # RTP Configuration (as per provider: 6000-65531)
 rtp_port: 6000-65531
