@@ -36,81 +36,83 @@ export LIVEKIT_API_SECRET="${LIVEKIT_API_SECRET:-b9dgi6VEHsXf1zLKFWffHONECta5Xvf
 echo "🔑 Using API Key: $LIVEKIT_API_KEY"
 echo "🌐 LiveKit URL: $LIVEKIT_URL"
 
-echo "📞 Creating Twilio inbound SIP trunk..."
+# Check if LiveKit CLI is available
+echo "� Checking for LiveKit CLI..."
+if command -v livekit-cli > /dev/null 2>&1; then
+    echo "✅ LiveKit CLI found, using CLI approach"
+    
+    # Create trunk using CLI
+    echo "� Creating Twilio inbound trunk using CLI..."
+    cat > /tmp/trunk.json << EOF
+{
+  "trunk": {
+    "name": "Twilio Inbound Trunk",
+    "inbound_addresses": [],
+    "inbound_numbers": ["+13074606119"],
+    "inbound_username": "",
+    "inbound_password": "",
+    "metadata": "provider=Twilio,number=+13074606119,type=inbound"
+  }
+}
+EOF
 
-# Prepare the authorization header
-AUTH_HEADER="Authorization: Bearer $(echo -n "${LIVEKIT_API_KEY}:${LIVEKIT_API_SECRET}" | base64)"
-echo "🔐 Authorization header prepared"
-
-# Create the inbound trunk
-echo "📡 Making API call to create trunk..."
-TRUNK_RESPONSE=$(curl -v -X POST "http://localhost:7880/twirp/livekit.SIP/CreateSIPInboundTrunk" \
-  -H "Content-Type: application/json" \
-  -H "$AUTH_HEADER" \
-  -d '{
-    "trunk": {
-      "name": "Twilio Inbound Trunk",
-      "inbound_addresses": [],
-      "inbound_numbers": ["+13074606119"],
-      "inbound_username": "",
-      "inbound_password": "",
-      "metadata": "provider=Twilio,number=+13074606119,type=inbound"
+    TRUNK_RESPONSE=$(livekit-cli create-sip-inbound-trunk --request /tmp/trunk.json 2>&1)
+    echo "📋 CLI Trunk creation response:"
+    echo "$TRUNK_RESPONSE"
+    
+    if echo "$TRUNK_RESPONSE" | grep -q "SIP Trunk ID"; then
+        TRUNK_ID=$(echo "$TRUNK_RESPONSE" | grep "SIP Trunk ID" | awk '{print $NF}')
+        echo "✅ Twilio trunk created successfully with ID: $TRUNK_ID"
+        
+        # Create dispatch rule using CLI
+        echo "� Creating dispatch rule using CLI..."
+        cat > /tmp/rule.json << EOF
+{
+  "rule": {
+    "dispatch_rule_direct": {
+      "room_name": "twilio-test-room"
     }
-  }' 2>&1)
+  },
+  "trunk_ids": ["$TRUNK_ID"],
+  "hide_phone_number": false,
+  "metadata": "test=true,provider=Twilio"
+}
+EOF
 
-echo "📋 Trunk creation response:"
-echo "$TRUNK_RESPONSE"
-echo ""
-
-if echo "$TRUNK_RESPONSE" | grep -q "sip_trunk_id"; then
-    TRUNK_ID=$(echo "$TRUNK_RESPONSE" | grep -o '"sip_trunk_id":"[^"]*"' | cut -d'"' -f4)
-    echo "✅ Twilio trunk created successfully with ID: $TRUNK_ID"
-    
-    echo "📋 Creating dispatch rule for Twilio trunk..."
-    
-    # Create the dispatch rule
-    echo "📡 Making API call to create dispatch rule..."
-    RULE_RESPONSE=$(curl -v -X POST "http://localhost:7880/twirp/livekit.SIP/CreateSIPDispatchRule" \
-      -H "Content-Type: application/json" \
-      -H "$AUTH_HEADER" \
-      -d "{
-        \"rule\": {
-          \"dispatch_rule_direct\": {
-            \"room_name\": \"twilio-test-room\"
-          }
-        },
-        \"trunk_ids\": [\"$TRUNK_ID\"],
-        \"hide_phone_number\": false,
-        \"metadata\": \"test=true,provider=Twilio\"
-      }" 2>&1)
-    
-    echo "📋 Dispatch rule creation response:"
-    echo "$RULE_RESPONSE"
-    echo ""
-    
-    if echo "$RULE_RESPONSE" | grep -q "sip_dispatch_rule_id"; then
-        RULE_ID=$(echo "$RULE_RESPONSE" | grep -o '"sip_dispatch_rule_id":"[^"]*"' | cut -d'"' -f4)
-        echo "✅ Dispatch rule created successfully with ID: $RULE_ID"
-        echo ""
-        echo "🎉 TWILIO SIP CONFIGURATION COMPLETE!"
-        echo "====================================="
-        echo "📞 Inbound number: +1 307 460 6119"
-        echo "🏠 Target room: twilio-test-room"
-        echo "🆔 Trunk ID: $TRUNK_ID"
-        echo "📋 Rule ID: $RULE_ID"
-        echo "📍 SIP URI: sip:+13074606119@${EXTERNAL_IP}:5170"
-        echo ""
-        echo "✅ You can now configure Twilio to send calls to this endpoint!"
-        echo "====================================="
+        RULE_RESPONSE=$(livekit-cli create-sip-dispatch-rule --request /tmp/rule.json 2>&1)
+        echo "📋 CLI Rule creation response:"
+        echo "$RULE_RESPONSE"
+        
+        if echo "$RULE_RESPONSE" | grep -q "SIP Dispatch Rule ID"; then
+            RULE_ID=$(echo "$RULE_RESPONSE" | grep "SIP Dispatch Rule ID" | awk '{print $NF}')
+            echo "✅ Dispatch rule created successfully with ID: $RULE_ID"
+            echo ""
+            echo "🎉 TWILIO SIP CONFIGURATION COMPLETE!"
+            echo "====================================="
+            echo "📞 Inbound number: +1 307 460 6119"
+            echo "🏠 Target room: twilio-test-room"
+            echo "🆔 Trunk ID: $TRUNK_ID"
+            echo "📋 Rule ID: $RULE_ID"
+            echo "📍 SIP URI: sip:+13074606119@${EXTERNAL_IP}:5170"
+            echo ""
+            echo "✅ You can now configure Twilio to send calls to this endpoint!"
+            echo "====================================="
+        else
+            echo "❌ FAILED to create dispatch rule using CLI"
+            echo "Response: $RULE_RESPONSE"
+            exit 1
+        fi
     else
-        echo "❌ FAILED to create dispatch rule"
-        echo "Response: $RULE_RESPONSE"
+        echo "❌ FAILED to create Twilio trunk using CLI"
+        echo "Response: $TRUNK_RESPONSE"
         exit 1
     fi
 else
-    echo "❌ FAILED to create Twilio trunk"
-    echo "Response: $TRUNK_RESPONSE"
-    exit 1
+    echo "❌ LiveKit CLI not found, skipping automatic trunk creation"
+    echo "ℹ️  You will need to create the trunk and dispatch rule manually:"
+    echo "   1. Trunk for number: +13074606119"
+    echo "   2. Dispatch rule to room: twilio-test-room"
+    exit 0
 fi
 
 echo "🏁 Twilio setup script completed successfully."
