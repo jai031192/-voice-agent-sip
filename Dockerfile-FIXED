@@ -74,6 +74,9 @@ WORKDIR /app
 COPY --from=builder /app/sip-app /app/sip-app
 COPY --from=builder /usr/local/bin/livekit-server /usr/local/bin/livekit-server
 COPY --from=builder /usr/local/bin/livekit-cli /usr/local/bin/livekit-cli
+
+# Ensure PATH includes LiveKit binaries
+ENV PATH="/usr/local/bin:${PATH}"
  
 # Copy config files
 COPY config.yaml /app/config.yaml
