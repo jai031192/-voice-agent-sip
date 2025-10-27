@@ -78,6 +78,12 @@ COPY --from=builder /usr/local/bin/livekit-server /usr/local/bin/livekit-server
 COPY config.yaml /app/config.yaml
 COPY livekit-config.yaml /app/livekit-config.yaml
 
+# Copy Twilio setup files
+COPY twilio-inbound-trunk.json /app/twilio-inbound-trunk.json
+COPY twilio-dispatch-rule.json /app/twilio-dispatch-rule.json
+COPY setup-twilio.sh /app/setup-twilio.sh
+RUN chmod +x /app/setup-twilio.sh
+
 # Create startup script to handle environment variables
 RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
@@ -96,6 +102,12 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'echo "LIVEKIT_API_KEY=$LIVEKIT_API_KEY"' >> /app/start.sh && \
     echo 'echo "LIVEKIT_WS_URL=$LIVEKIT_WS_URL"' >> /app/start.sh && \
     echo 'echo "SIP_USERNAME=$SIP_USERNAME"' >> /app/start.sh && \
+    echo 'echo ""' >> /app/start.sh && \
+    echo 'echo "🚀 Starting LiveKit SIP Service with Twilio Integration"' >> /app/start.sh && \
+    echo 'echo "📞 Twilio test number: +1 307 460 6119"' >> /app/start.sh && \
+    echo 'echo "🏠 Target room: twilio-test-room"' >> /app/start.sh && \
+    echo 'echo "📍 SIP URI will be: sip:+13074606119@$EXTERNAL_IP:5170"' >> /app/start.sh && \
+    echo 'echo ""' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Debug: Check binaries before starting supervisor' >> /app/start.sh && \
     echo 'echo "Checking binaries..."' >> /app/start.sh && \
@@ -103,6 +115,8 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'ls -la /app/sip-app' >> /app/start.sh && \
     echo 'echo "Config files:"' >> /app/start.sh && \
     echo 'ls -la /app/*.yaml' >> /app/start.sh && \
+    echo 'ls -la /app/*.json' >> /app/start.sh && \
+    echo 'ls -la /app/*.sh' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Start supervisor (environment variables will be inherited)' >> /app/start.sh && \
     echo 'exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf' >> /app/start.sh && \
@@ -158,7 +172,17 @@ RUN echo '[program:redis]' > /etc/supervisor/conf.d/programs.conf && \
     echo 'autostart=true' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'autorestart=true' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'stdout_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'stderr_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf
+    echo 'stderr_logfile=/var/log/sip.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo '' >> /etc/supervisor/conf.d/programs.conf && \
+    echo '[program:twilio-setup]' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'command=/app/setup-twilio.sh' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'user=root' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autostart=true' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'autorestart=false' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'startsecs=0' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'exitcodes=0' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stdout_logfile=/var/log/twilio-setup.log' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stderr_logfile=/var/log/twilio-setup.log' >> /etc/supervisor/conf.d/programs.conf
 
 # Verify configuration files were created correctly and set permissions
 RUN ls -la /etc/supervisor/ && \
@@ -177,7 +201,7 @@ RUN chmod +x /app/sip-app && \
     /usr/local/bin/livekit-server --help | head -5
 
 # Test supervisor configuration syntax only (without starting services)
-RUN python3 -c "import configparser; import sys; config = configparser.ConfigParser(); config.read('/etc/supervisor/supervisord.conf'); assert 'supervisord' in config.sections(), 'Missing supervisord section'; config.read('/etc/supervisor/conf.d/programs.conf'); assert 'program:redis' in config.sections(), 'Missing redis program'; assert 'program:livekit' in config.sections(), 'Missing livekit program'; assert 'program:sip' in config.sections(), 'Missing sip program'; print('Supervisor configuration validation passed successfully')"
+RUN python3 -c "import configparser; import sys; config = configparser.ConfigParser(); config.read('/etc/supervisor/supervisord.conf'); assert 'supervisord' in config.sections(), 'Missing supervisord section'; config.read('/etc/supervisor/conf.d/programs.conf'); assert 'program:redis' in config.sections(), 'Missing redis program'; assert 'program:livekit' in config.sections(), 'Missing livekit program'; assert 'program:sip' in config.sections(), 'Missing sip program'; assert 'program:twilio-setup' in config.sections(), 'Missing twilio-setup program'; print('Supervisor configuration validation passed successfully')"
  
 # Expose ports
 EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp

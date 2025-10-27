@@ -1,0 +1,10 @@
+{
+  "rule": {
+    "dispatch_rule_direct": {
+      "room_name": "twilio-test-room"
+    }
+  },
+  "trunk_ids": [],
+  "hide_phone_number": false,
+  "metadata": "test=true,provider=Twilio"
+}

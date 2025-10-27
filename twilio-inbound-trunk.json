@@ -1,0 +1,10 @@
+{
+  "trunk": {
+    "name": "Twilio Inbound Trunk",
+    "inbound_addresses": [],
+    "inbound_numbers": ["+13074606119"],
+    "inbound_username": "",
+    "inbound_password": "",
+    "metadata": "provider=Twilio,number=+13074606119,type=inbound"
+  }
+}
