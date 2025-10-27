@@ -86,7 +86,7 @@ COPY livekit-config.yaml /app/livekit-config.yaml
 # Copy Twilio setup files
 COPY twilio-inbound-trunk.json /app/twilio-inbound-trunk.json
 COPY twilio-dispatch-rule.json /app/twilio-dispatch-rule.json
-COPY setup-twilio-cli.sh /app/setup-twilio.sh
+COPY setup-twilio-final.sh /app/setup-twilio.sh
 RUN chmod +x /app/setup-twilio.sh
 
 # Create startup script to handle environment variables
