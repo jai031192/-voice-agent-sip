@@ -70,9 +70,10 @@ RUN groupadd -g 1001 livekit && useradd -u 1001 -g livekit -m livekit
 # Set working directory
 WORKDIR /app
  
-# Copy SIP binary and LiveKit server from builder
+# Copy SIP binary, LiveKit server, and LiveKit CLI from builder
 COPY --from=builder /app/sip-app /app/sip-app
 COPY --from=builder /usr/local/bin/livekit-server /usr/local/bin/livekit-server
+COPY --from=builder /usr/local/bin/livekit-cli /usr/local/bin/livekit-cli
  
 # Copy config files
 COPY config.yaml /app/config.yaml
@@ -112,7 +113,10 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo '# Debug: Check binaries before starting supervisor' >> /app/start.sh && \
     echo 'echo "Checking binaries..."' >> /app/start.sh && \
     echo 'ls -la /usr/local/bin/livekit-server' >> /app/start.sh && \
+    echo 'ls -la /usr/local/bin/livekit-cli' >> /app/start.sh && \
     echo 'ls -la /app/sip-app' >> /app/start.sh && \
+    echo 'echo "CLI availability:"' >> /app/start.sh && \
+    echo 'which livekit-cli || echo "CLI not in PATH"' >> /app/start.sh && \
     echo 'echo "Config files:"' >> /app/start.sh && \
     echo 'ls -la /app/*.yaml' >> /app/start.sh && \
     echo 'ls -la /app/*.json' >> /app/start.sh && \
@@ -198,9 +202,13 @@ RUN ls -la /etc/supervisor/ && \
 RUN chmod +x /app/sip-app && \
     ls -la /app/sip-app && \
     ls -la /usr/local/bin/livekit-server && \
+    ls -la /usr/local/bin/livekit-cli && \
     chmod +x /usr/local/bin/livekit-server && \
+    chmod +x /usr/local/bin/livekit-cli && \
     echo "LiveKit server binary check:" && \
-    /usr/local/bin/livekit-server --help | head -5
+    /usr/local/bin/livekit-server --help | head -5 && \
+    echo "LiveKit CLI binary check:" && \
+    /usr/local/bin/livekit-cli --help | head -5
 
 # Test supervisor configuration syntax only (without starting services)
 RUN python3 -c "import configparser; import sys; config = configparser.ConfigParser(); config.read('/etc/supervisor/supervisord.conf'); assert 'supervisord' in config.sections(), 'Missing supervisord section'; config.read('/etc/supervisor/conf.d/programs.conf'); assert 'program:redis' in config.sections(), 'Missing redis program'; assert 'program:livekit' in config.sections(), 'Missing livekit program'; assert 'program:sip' in config.sections(), 'Missing sip program'; assert 'program:twilio-setup' in config.sections(), 'Missing twilio-setup program'; print('Supervisor configuration validation passed successfully')"
