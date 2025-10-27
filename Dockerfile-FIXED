@@ -181,8 +181,10 @@ RUN echo '[program:redis]' > /etc/supervisor/conf.d/programs.conf && \
     echo 'autorestart=false' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'startsecs=0' >> /etc/supervisor/conf.d/programs.conf && \
     echo 'exitcodes=0' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'stdout_logfile=/var/log/twilio-setup.log' >> /etc/supervisor/conf.d/programs.conf && \
-    echo 'stderr_logfile=/var/log/twilio-setup.log' >> /etc/supervisor/conf.d/programs.conf
+    echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stderr_logfile=/dev/stderr' >> /etc/supervisor/conf.d/programs.conf && \
+    echo 'stderr_logfile_maxbytes=0' >> /etc/supervisor/conf.d/programs.conf
 
 # Verify configuration files were created correctly and set permissions
 RUN ls -la /etc/supervisor/ && \
