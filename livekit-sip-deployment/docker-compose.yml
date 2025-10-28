@@ -7,9 +7,22 @@ services:
       dockerfile: livekit-sip-deployment/Dockerfile
     container_name: livekit-sip-monkhub
     restart: unless-stopped
-    network_mode: host  # Use host networking - solves IP issues
+    # Use bridge networking with explicit port mappings so this works on Windows
+    # and environments where host networking is not supported.
+    ports:
+      - "7880:7880/tcp"    # LiveKit WebSocket
+      - "7881:7881/tcp"    # LiveKit RTC
+      - "5060:5060/tcp"    # SIP TCP
+      - "5060:5060/udp"    # SIP UDP
+      - "8080:8080/tcp"    # Health check
+      - "9090:9090/tcp"    # Metrics
+      - "6000-6100:6000-6100/udp"  # RTP range for SIP
     environment:
       - EXTERNAL_IP=40.81.229.194  # Your Azure static IP
+      - LIVEKIT_URL=http://livekit-server:7880
+      - REDIS_URL=redis://redis:6379
+      - LIVEKIT_API_KEY=108378f337bbab3ce4e944554bed555a
+      - LIVEKIT_API_SECRET=2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
       interval: 30s
