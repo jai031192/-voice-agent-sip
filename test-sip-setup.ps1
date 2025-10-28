@@ -43,13 +43,16 @@ Write-Host "SIP Service: localhost:5060"
 Write-Host "Redis: localhost:6379"
 Write-Host ""
 Write-Host "=== API Credentials ===" -ForegroundColor Yellow
-Write-Host "API Key: API5DcPxqyBDHLr"
-Write-Host "API Secret: b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"
+Write-Host "API Key: 108378f337bbab3ce4e944554bed555a"
+Write-Host "API Secret: 2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"
 Write-Host ""
 
 # Room management
 Write-Host "=== Room Management ===" -ForegroundColor Yellow
 Write-Host "Test Room: sip-test-room"
+
+    $env:LIVEKIT_API_KEY="108378f337bbab3ce4e944554bed555a"
+    $env:LIVEKIT_API_SECRET="2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"
 
 # Quick actions menu
 Write-Host "=== Quick Actions ===" -ForegroundColor Cyan
@@ -81,8 +84,8 @@ switch ($choice) {
     }
     "4" {
         $env:LIVEKIT_URL="http://localhost:7880"
-        $env:LIVEKIT_API_KEY="API5DcPxqyBDHLr"
-        $env:LIVEKIT_API_SECRET="b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"
+    $env:LIVEKIT_API_KEY="108378f337bbab3ce4e944554bed555a"
+    $env:LIVEKIT_API_SECRET="2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"
         livekit-cli create-room --name "test-room-$(Get-Date -Format 'HHmmss')"
     }
     "5" {

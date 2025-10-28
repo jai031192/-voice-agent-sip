@@ -6,8 +6,8 @@ Write-Host ""
 
 # Set environment variables
 $env:LIVEKIT_URL = "http://localhost:7880"
-$env:LIVEKIT_API_KEY = "API5DcPxqyBDHLr"
-$env:LIVEKIT_API_SECRET = "b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"
+$env:LIVEKIT_API_KEY = "108378f337bbab3ce4e944554bed555a"
+$env:LIVEKIT_API_SECRET = "2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"
 
 Write-Host "Environment configured:" -ForegroundColor Yellow
 Write-Host "- LiveKit URL: $env:LIVEKIT_URL"
@@ -113,7 +113,7 @@ Write-Host "=== Setup Summary ===" -ForegroundColor Cyan
 Write-Host "LiveKit Server: http://localhost:7880"
 Write-Host "SIP Service: localhost:5060"
 Write-Host "Test Room: sip-test-room"
-Write-Host "API Key: API5DcPxqyBDHLr"
+Write-Host "API Key: 108378f337bbab3ce4e944554bed555a"
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Yellow
 Write-Host "1. Configure your SIP provider to point to this server"

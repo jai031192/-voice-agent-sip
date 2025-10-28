@@ -1,7 +1,7 @@
 # Simple JWT token generator for LiveKit
 param(
-    [string]$ApiKey = "API5DcPxqyBDHLr",
-    [string]$ApiSecret = "b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"
+    [string]$ApiKey = "108378f337bbab3ce4e944554bed555a",
+    [string]$ApiSecret = "2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"
 )
 
 # Create JWT header

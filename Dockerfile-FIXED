@@ -95,8 +95,8 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Set default environment variables (can be overridden by container runtime)' >> /app/start.sh && \
     echo 'export EXTERNAL_IP=${EXTERNAL_IP:-"40.81.229.194"}' >> /app/start.sh && \
-    echo 'export LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-"API5DcPxqyBDHLr"}' >> /app/start.sh && \
-    echo 'export LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-"b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"}' >> /app/start.sh && \
+    echo 'export LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-"108378f337bbab3ce4e944554bed555a"}' >> /app/start.sh && \
+    echo 'export LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-"2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"}' >> /app/start.sh && \
     echo 'export LIVEKIT_WS_URL=${LIVEKIT_WS_URL:-"ws://localhost:7880"}' >> /app/start.sh && \
     echo 'export SIP_USERNAME=${SIP_USERNAME:-"00919240908080"}' >> /app/start.sh && \
     echo 'export SIP_PASSWORD=${SIP_PASSWORD:-"1234"}' >> /app/start.sh && \

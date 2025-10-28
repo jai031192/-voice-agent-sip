@@ -33,7 +33,7 @@ echo ================================
 echo LiveKit Server: http://localhost:7880
 echo SIP Service: 0.0.0.0:5060
 echo Redis: localhost:6379
-echo API Key: API5DcPxqyBDHLr
+echo API Key: 108378f337bbab3ce4e944554bed555a
 echo ================================
 echo.
 echo Starting SIP service... (Press Ctrl+C to stop)

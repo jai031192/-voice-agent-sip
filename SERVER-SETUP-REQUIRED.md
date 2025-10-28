@@ -50,7 +50,7 @@ bind_addresses:
 redis:
   address: localhost:6379
 keys:
-  d6212ffd426f199fe1759c6370c85155: 6a7b312f5643020c86ceeef8785824e01f6ab1bd35394db1abf9d62e900ae23e
+  108378f337bbab3ce4e944554bed555a: 2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
 EOF
 
 # Create systemd service

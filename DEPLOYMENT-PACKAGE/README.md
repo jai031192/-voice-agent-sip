@@ -148,7 +148,7 @@ AZURE_SUBSCRIPTION_ID    # Subscription ID
 AZURE_CLIENT_SECRET      # Service Principal Secret
 
 # Application Secrets
-LIVEKIT_API_KEY          # API5DcPxqyBDHLr
+LIVEKIT_API_KEY          # 108378f337bbab3ce4e944554bed555a
 LIVEKIT_API_SECRET       # Your LiveKit secret
 SIP_USERNAME             # 00919240908080
 SIP_PASSWORD             # MONKHUB password

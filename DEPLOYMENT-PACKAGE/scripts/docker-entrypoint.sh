@@ -36,8 +36,8 @@ done
 
 # Set environment variables for SIP service
 export LIVEKIT_URL="http://localhost:7880"
-export LIVEKIT_API_KEY="API5DcPxqyBDHLr"
-export LIVEKIT_API_SECRET="b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"
+export LIVEKIT_API_KEY="108378f337bbab3ce4e944554bed555a"
+export LIVEKIT_API_SECRET="2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"
 
 # Create SIP trunk and dispatch rule for MONKHUB
 echo "📞 Setting up MONKHUB SIP configuration..."

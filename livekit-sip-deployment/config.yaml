@@ -4,8 +4,8 @@
 log_level: info
 log_requests: true
 
-api_key: API5DcPxqyBDHLr
-api_secret: b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
+api_key: 108378f337bbab3ce4e944554bed555a
+api_secret: 2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
 ws_url: ws://localhost:7880
 
 redis:

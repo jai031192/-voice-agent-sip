@@ -44,8 +44,8 @@ STAGING_EXTERNAL_IP      = <staging-environment-ip>
 
 ### Application Configuration:
 ```
-LIVEKIT_API_KEY         = API5DcPxqyBDHLr
-LIVEKIT_API_SECRET      = b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
+LIVEKIT_API_KEY         = 108378f337bbab3ce4e944554bed555a
+LIVEKIT_API_SECRET      = 2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
 SIP_USERNAME            = 00919240908080
 SIP_PASSWORD            = 1234
 ```
@@ -84,8 +84,8 @@ az ad sp create-for-rbac \
 #### config-development.yaml:
 ```yaml
 log_level: debug
-api_key: API5DcPxqyBDHLr
-api_secret: b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
+api_key: 108378f337bbab3ce4e944554bed555a
+api_secret: 2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
 ws_url: ws://localhost:7880
 redis:
   address: localhost:6379
@@ -97,8 +97,8 @@ external_ip: "localhost"
 #### config-staging.yaml:
 ```yaml
 log_level: info
-api_key: API5DcPxqyBDHLr
-api_secret: b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
+api_key: 108378f337bbab3ce4e944554bed555a
+api_secret: 2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
 ws_url: ws://localhost:7880
 redis:
   address: redis:6379
@@ -111,8 +111,8 @@ external_ip: "${STAGING_EXTERNAL_IP}"
 ```yaml
 log_level: info
 log_requests: true
-api_key: API5DcPxqyBDHLr
-api_secret: b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
+api_key: 108378f337bbab3ce4e944554bed555a
+api_secret: 2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
 ws_url: ws://localhost:7880
 redis:
   address: redis:6379

@@ -14,8 +14,8 @@ fi
 echo "✅ Container is running"
 
 # Get API credentials from environment or use defaults
-LIVEKIT_API_KEY="API5DcPxqyBDHLr"
-LIVEKIT_API_SECRET="b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE"
+LIVEKIT_API_KEY="108378f337bbab3ce4e944554bed555a"
+LIVEKIT_API_SECRET="2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d"
 
 echo "🔑 Using API Key: $LIVEKIT_API_KEY"
 

@@ -4,8 +4,8 @@ echo ============================
 echo.
 
 set LIVEKIT_URL=http://localhost:7880
-set LIVEKIT_API_KEY=API5DcPxqyBDHLr
-set LIVEKIT_API_SECRET=b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE
+set LIVEKIT_API_KEY=108378f337bbab3ce4e944554bed555a
+set LIVEKIT_API_SECRET=2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
 
 echo Environment:
 echo - Server: %LIVEKIT_URL%
