@@ -6,11 +6,31 @@ echo "🔧 TWILIO SIP TRUNK SETUP STARTING"
 echo "===========================================" 
 echo "Setting up Twilio SIP Trunk and Dispatch Rule..."
 
-# Wait for LiveKit server to be ready
-echo "Waiting for LiveKit server to start..."
+# Set up LiveKit CLI environment (can be overridden at runtime)
+export LIVEKIT_URL="${LIVEKIT_URL:-http://localhost:7880}"
+export LIVEKIT_API_KEY="${LIVEKIT_API_KEY:-API5DcPxqyBDHLr}"
+export LIVEKIT_API_SECRET="${LIVEKIT_API_SECRET:-b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE}"
+
+# Derive an API HTTP(S) URL from the LIVEKIT_URL (accept ws/wss inputs)
+if [[ "$LIVEKIT_URL" == wss://* ]]; then
+    API_URL="https://${LIVEKIT_URL#wss://}"
+elif [[ "$LIVEKIT_URL" == ws://* ]]; then
+    API_URL="http://${LIVEKIT_URL#ws://}"
+elif [[ "$LIVEKIT_URL" == https://* || "$LIVEKIT_URL" == http://* ]]; then
+    API_URL="$LIVEKIT_URL"
+else
+    API_URL="http://localhost:7880"
+fi
+
+echo "🔑 Using API Key: $LIVEKIT_API_KEY"
+echo "🌐 LiveKit URL: $LIVEKIT_URL"
+echo "🌐 LiveKit API URL: $API_URL"
+
+# Wait for the LiveKit server (API) to be ready
+echo "Waiting for LiveKit server to start (checking $API_URL/health)..."
 timeout=60
 while [ $timeout -gt 0 ]; do
-    if curl -s http://localhost:7880/health > /dev/null 2>&1; then
+    if curl -s -k "$API_URL/health" > /dev/null 2>&1; then
         echo "✅ LiveKit server is ready!"
         break
     fi
@@ -28,20 +48,13 @@ fi
 echo "⏳ Waiting additional 10 seconds for services to stabilize..."
 sleep 10
 
-# Set up LiveKit CLI environment
-export LIVEKIT_URL="http://localhost:7880"
-export LIVEKIT_API_KEY="${LIVEKIT_API_KEY:-API5DcPxqyBDHLr}"
-export LIVEKIT_API_SECRET="${LIVEKIT_API_SECRET:-b9dgi6VEHsXf1zLKFWffHONECta5Xvfs5ejgdZhUoxPE}"
-
-echo "🔑 Using API Key: $LIVEKIT_API_KEY"
-echo "🌐 LiveKit URL: $LIVEKIT_URL"
-
+# (LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET are already configured above)
 echo "📞 Creating Twilio inbound trunk and dispatch rule..."
 
 # Create trunk using the working CLI flags
 echo "📞 Creating trunk using working CLI flags..."
 set +e
-TRUNK_RESPONSE=$(livekit-cli sip inbound create --name "Twilio Inbound Trunk" --numbers "+13074606119" 2>&1)
+TRUNK_RESPONSE=$(livekit-cli --url "$API_URL" --api-key "$LIVEKIT_API_KEY" --api-secret "$LIVEKIT_API_SECRET" sip inbound create --name "Twilio Inbound Trunk" --numbers "+13074606119" 2>&1)
 TRUNK_EXIT_CODE=$?
 set -e
 
@@ -66,7 +79,7 @@ if [ $TRUNK_EXIT_CODE -eq 0 ]; then
         
         # Create dispatch rule using the correct CLI flags from help output
         set +e
-        RULE_RESPONSE=$(livekit-cli sip dispatch create --trunks "$TRUNK_ID" --direct "twilio-test-room" 2>&1)
+    RULE_RESPONSE=$(livekit-cli --url "$API_URL" --api-key "$LIVEKIT_API_KEY" --api-secret "$LIVEKIT_API_SECRET" sip dispatch create --trunks "$TRUNK_ID" --direct "twilio-test-room" 2>&1)
         RULE_EXIT_CODE=$?
         set -e
         
@@ -98,11 +111,11 @@ if [ $TRUNK_EXIT_CODE -eq 0 ]; then
             # List final configuration
             echo ""
             echo "📋 Final trunk configuration:"
-            livekit-cli sip inbound list 2>&1 | grep -A 5 -B 5 "$TRUNK_ID" || echo "Could not display trunk details"
+            livekit-cli --url "$API_URL" --api-key "$LIVEKIT_API_KEY" --api-secret "$LIVEKIT_API_SECRET" sip inbound list 2>&1 | grep -A 5 -B 5 "$TRUNK_ID" || echo "Could not display trunk details"
             
             echo ""
             echo "📋 Final dispatch rules:"
-            livekit-cli sip dispatch list 2>&1 | head -20 || echo "Could not list dispatch rules"
+            livekit-cli --url "$API_URL" --api-key "$LIVEKIT_API_KEY" --api-secret "$LIVEKIT_API_SECRET" sip dispatch list 2>&1 | head -20 || echo "Could not list dispatch rules"
             
         else
             echo "❌ Dispatch rule creation failed with correct flags"
@@ -112,7 +125,7 @@ if [ $TRUNK_EXIT_CODE -eq 0 ]; then
             echo ""
             echo "🔄 Trying with name parameter..."
             set +e
-            ALT_RULE_RESPONSE=$(livekit-cli sip dispatch create --name "Twilio Dispatch Rule" --trunks "$TRUNK_ID" --direct "twilio-test-room" 2>&1)
+            ALT_RULE_RESPONSE=$(livekit-cli --url "$API_URL" --api-key "$LIVEKIT_API_KEY" --api-secret "$LIVEKIT_API_SECRET" sip dispatch create --name "Twilio Dispatch Rule" --trunks "$TRUNK_ID" --direct "twilio-test-room" 2>&1)
             ALT_EXIT_CODE=$?
             set -e
             
