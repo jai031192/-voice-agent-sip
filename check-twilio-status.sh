@@ -6,8 +6,8 @@ echo "=================================="
 # Check if container is running
 if ! docker ps | grep -q "voice-agent-sip-container"; then
     echo "❌ Container 'voice-agent-sip-container' is not running"
-    echo "Please start it first with:"
-    echo "docker run -d --name voice-agent-sip-container -p 5170:5170 -p 8080:8080 voice-agent-sip:latest"
+  echo "Please start it first with:"
+  echo "docker run -d --name voice-agent-sip-container -p 5060:5060 -p 8080:8080 voice-agent-sip:latest"
     exit 1
 fi
 
@@ -55,4 +55,4 @@ echo "$RULES_RESPONSE" | jq '.' 2>/dev/null || echo "$RULES_RESPONSE"
 
 echo ""
 echo "🔗 If trunks exist, configure Twilio to point to:"
-echo "📍 sip:+13074606119@40.81.229.194:5170"
+echo "📍 sip:+13074606119@40.81.229.194:5060"

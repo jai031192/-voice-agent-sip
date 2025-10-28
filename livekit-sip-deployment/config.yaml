@@ -15,7 +15,7 @@ redis:
   db: 0
 
 # SIP Configuration for MONKHUB provider (Production)
-sip_port: 5170  # Match provider destination port
+sip_port: 5060  # Match provider destination port
 bind_address: "0.0.0.0"  # Listen on all interfaces
 external_ip: "${EXTERNAL_IP:-40.81.229.194}"  # Your Azure public IP
 

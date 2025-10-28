@@ -103,7 +103,7 @@ done
 # Start SIP service (foreground)
 echo "📞 Starting SIP Service..."
 echo "🌐 MONKHUB SIP Service ready:"
-echo "   - SIP Endpoint: 0.0.0.0:5170"
+echo "   - SIP Endpoint: 0.0.0.0:5060"
 echo "   - LiveKit API: 0.0.0.0:7880" 
 echo "   - Health Check: 0.0.0.0:8080"
 echo "   - Provider: MONKHUB (27.107.220.6)"

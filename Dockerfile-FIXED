@@ -111,7 +111,7 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'echo "🚀 Starting LiveKit SIP Service with Twilio Integration"' >> /app/start.sh && \
     echo 'echo "📞 Twilio test number: +1 307 460 6119"' >> /app/start.sh && \
     echo 'echo "🏠 Target room: twilio-test-room"' >> /app/start.sh && \
-    echo 'echo "📍 SIP URI will be: sip:+13074606119@$EXTERNAL_IP:5170"' >> /app/start.sh && \
+    echo 'echo "📍 SIP URI will be: sip:+13074606119@$EXTERNAL_IP:5060"' >> /app/start.sh && \
     echo 'echo ""' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Debug: Check binaries before starting supervisor' >> /app/start.sh && \
@@ -218,7 +218,7 @@ RUN chmod +x /app/sip-app && \
 RUN python3 -c "import configparser; import sys; config = configparser.ConfigParser(); config.read('/etc/supervisor/supervisord.conf'); assert 'supervisord' in config.sections(), 'Missing supervisord section'; config.read('/etc/supervisor/conf.d/programs.conf'); assert 'program:redis' in config.sections(), 'Missing redis program'; assert 'program:livekit' in config.sections(), 'Missing livekit program'; assert 'program:sip' in config.sections(), 'Missing sip program'; assert 'program:twilio-setup' in config.sections(), 'Missing twilio-setup program'; print('Supervisor configuration validation passed successfully')"
  
 # Expose ports
-EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
+EXPOSE 5060/tcp 5060/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
  
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \

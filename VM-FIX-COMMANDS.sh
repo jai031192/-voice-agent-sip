@@ -29,7 +29,7 @@ services:
     container_name: livekit-sip-monkhub-prod
     restart: unless-stopped
     ports:
-      - "5170:5170/udp"   # SIP
+  - "5060:5060/udp"   # SIP
       - "8080:8080/tcp"   # Health
       - "9090:9090/tcp"   # Metrics
       - "6000-65531:6000-65531/udp"  # RTP

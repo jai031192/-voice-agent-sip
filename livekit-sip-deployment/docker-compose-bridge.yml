@@ -34,8 +34,8 @@ services:
     container_name: livekit-sip-monkhub
     restart: unless-stopped
     ports:
-      - "5170:5170/tcp"
-      - "5170:5170/udp"
+  - "5060:5060/tcp"
+  - "5060:5060/udp"
       - "8080:8080/tcp"
       - "6000-6100:6000-6100/udp"
     environment:

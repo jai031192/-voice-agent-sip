@@ -75,7 +75,7 @@ RUN chmod +x /app/sip-app /app/docker-entrypoint.sh /app/livekit-cli
 USER livekit
  
 # Expose required ports
-EXPOSE 5170/tcp 5170/udp 7880/tcp 8080/tcp 6000-6100/udp 50000-50100/udp
+EXPOSE 5060/tcp 5060/udp 7880/tcp 8080/tcp 6000-6100/udp 50000-50100/udp
  
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \

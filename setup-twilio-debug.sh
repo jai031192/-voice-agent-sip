@@ -108,7 +108,7 @@ if command -v livekit-cli > /dev/null 2>&1; then
             echo "🏠 Target room: twilio-test-room"
             echo "🆔 Trunk ID: $TRUNK_ID"
             echo "📋 Rule ID: $RULE_ID"
-            echo "📍 SIP URI: sip:+13074606119@${EXTERNAL_IP}:5170"
+            echo "📍 SIP URI: sip:+13074606119@${EXTERNAL_IP}:5060"
             echo ""
             echo "✅ You can now configure Twilio to send calls to this endpoint!"
             echo "====================================="

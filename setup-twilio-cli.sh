@@ -127,7 +127,7 @@ EOF
     echo "ℹ️  Based on the CLI investigation, you'll need to create:"
     echo "   📞 Inbound trunk for: +13074606119"
     echo "   🏠 Dispatch rule to room: twilio-test-room"
-    echo "   📍 SIP endpoint: sip:+13074606119@${EXTERNAL_IP}:5170"
+    echo "   📍 SIP endpoint: sip:+13074606119@${EXTERNAL_IP}:5060"
     echo ""
     echo "💡 Use the LiveKit dashboard or proper CLI syntax once identified"
     
