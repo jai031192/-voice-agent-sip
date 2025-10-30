@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  livekit-sip-twilio:
+    build: 
+      context: ../
+      dockerfile: livekit-sip-deployment/Dockerfile-twilio
+    container_name: voice-agent-sip-container
+    restart: unless-stopped
+    ports:
+      - "5060:5060/tcp"    # SIP TCP
+      - "5060:5060/udp"    # SIP UDP
+      - "7880:7880/tcp"    # LiveKit API (if needed)
+      - "8080:8080/tcp"    # Health check
+      - "9090:9090/tcp"    # Metrics
+      - "6000-6100:6000-6100/udp"  # RTP range for SIP
+    
+    environment:
+      - EXTERNAL_IP=40.81.229.194  # Your Azure static IP
+      - LIVEKIT_URL=http://localhost:7880
+      - LIVEKIT_API_KEY=108378f337bbab3ce4e944554bed555a
+      - LIVEKIT_API_SECRET=2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d
+      - PHONE_NUMBER=+13074606119
+      - REDIS_URL=redis://localhost:6379
+      
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+      
+    volumes:
+      - sip_data:/app/data  # Optional: for persistent data
+
+volumes:
+  sip_data:
+    driver: local

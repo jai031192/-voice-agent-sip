@@ -1,46 +1,53 @@
 #!/bin/bash
 
-set -e
+echo "🚀 Starting LiveKit SIP Service Stack for Twilio..."
 
-echo "=============================================="
-echo "🔧 TWILIO SIP TRUNK SETUP STARTING"
-echo "=============================================="
-echo "Setting up Twilio SIP Trunk and Dispatch Rule..."
+# Start Redis in background
+echo "📊 Starting Redis..."
+redis-server --daemonize yes --port 6379 --bind 0.0.0.0
+sleep 3
 
-# Environment variables
-LIVEKIT_API_KEY="${LIVEKIT_API_KEY:-108378f337bbab3ce4e944554bed555a}"
-LIVEKIT_API_SECRET="${LIVEKIT_API_SECRET:-2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d}"
-LIVEKIT_URL="${LIVEKIT_URL:-wss://livekit-socket.immodesta.com}"
-EXTERNAL_IP="${EXTERNAL_IP:-40.81.229.194}"
-SIP_PORT="${SIP_PORT:-5060}"
-TARGET_ROOM="${TARGET_ROOM:-call-}"
-PHONE_NUMBER="${PHONE_NUMBER:-+13074606119}"
+# Verify Redis is running
+redis-cli ping
+if [ $? -ne 0 ]; then
+    echo "❌ Redis failed to start"
+    exit 1
+fi
 
-echo "🔑 Using API Key: ${LIVEKIT_API_KEY}"
-echo "🌐 LiveKit URL: ${LIVEKIT_URL}"
+# Start LiveKit server in background
+echo "🎥 Starting LiveKit Server..."
+./livekit-server --config livekit-config.yaml &
+LIVEKIT_PID=$!
+sleep 10
 
-# Convert WebSocket URL to HTTP for API calls
-LIVEKIT_API_URL=$(echo "$LIVEKIT_URL" | sed 's/wss:/https:/' | sed 's/ws:/http:/')
-echo "🌐 LiveKit API URL: ${LIVEKIT_API_URL}"
-
-# Wait for LiveKit server
-echo "Waiting for LiveKit server to start (checking ${LIVEKIT_API_URL}/health)..."
-for i in {1..30}; do
-    if curl -s "${LIVEKIT_API_URL}/health" > /dev/null 2>&1; then
-        echo "✅ LiveKit server is ready!"
+# Wait for LiveKit to be ready
+echo "⏳ Waiting for LiveKit Server to be ready..."
+for i in $(seq 1 30); do
+    if wget --spider -q http://localhost:7880; then
+        echo "✅ LiveKit Server is ready"
         break
     fi
-    echo "⏳ Waiting for LiveKit server... ($i/30)"
+    if [ $i -eq 30 ]; then
+        echo "❌ LiveKit Server failed to start"
+        exit 1
+    fi
     sleep 2
 done
 
-echo "⏳ Waiting additional 10 seconds for services to stabilize..."
-sleep 10
+# Set environment variables for SIP service
+export LIVEKIT_URL="${LIVEKIT_URL:-http://localhost:7880}"
+export LIVEKIT_API_KEY="${LIVEKIT_API_KEY:-108378f337bbab3ce4e944554bed555a}"
+export LIVEKIT_API_SECRET="${LIVEKIT_API_SECRET:-2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0acb7932d}"
+export EXTERNAL_IP="${EXTERNAL_IP:-40.81.229.194}"
+export PHONE_NUMBER="${PHONE_NUMBER:-+13074606119}"
+
+# Setup Twilio SIP configuration
+echo "📞 Setting up Twilio SIP configuration..."
 
 # Delete any existing conflicting trunks for this number
 echo "🗑️ Cleaning up any existing trunks for number ${PHONE_NUMBER}..."
-EXISTING_TRUNKS=$(livekit-cli sip list-trunk \
-    --url "${LIVEKIT_API_URL}" \
+EXISTING_TRUNKS=$(./livekit-cli sip list-trunk \
+    --url "${LIVEKIT_URL}" \
     --api-key "${LIVEKIT_API_KEY}" \
     --api-secret "${LIVEKIT_API_SECRET}" \
     --output json 2>/dev/null || echo "[]")
@@ -49,16 +56,15 @@ if [ "$EXISTING_TRUNKS" != "[]" ] && [ -n "$EXISTING_TRUNKS" ]; then
     echo "$EXISTING_TRUNKS" | jq -r '.[] | select(.numbers[] == "'"$PHONE_NUMBER"'") | .sip_trunk_id' | while read -r trunk_id; do
         if [ -n "$trunk_id" ] && [ "$trunk_id" != "null" ]; then
             echo "🗑️ Deleting existing trunk: $trunk_id"
-            livekit-cli sip delete-trunk "$trunk_id" \
-                --url "${LIVEKIT_API_URL}" \
+            ./livekit-cli sip delete-trunk "$trunk_id" \
+                --url "${LIVEKIT_URL}" \
                 --api-key "${LIVEKIT_API_KEY}" \
                 --api-secret "${LIVEKIT_API_SECRET}" || echo "⚠️ Failed to delete trunk $trunk_id"
         fi
     done
 fi
 
-# Create the corrected trunk JSON
-echo "📞 Creating trunk with corrected JSON format..."
+# Create trunk JSON
 cat > /tmp/trunk.json << EOF
 {
   "name": "Twilio Inbound Trunk",
@@ -72,8 +78,8 @@ cat /tmp/trunk.json
 
 # Create trunk
 echo "📞 Creating trunk..."
-TRUNK_RESULT=$(livekit-cli sip inbound create /tmp/trunk.json \
-    --url "${LIVEKIT_API_URL}" \
+TRUNK_RESULT=$(./livekit-cli sip inbound create /tmp/trunk.json \
+    --url "${LIVEKIT_URL}" \
     --api-key "${LIVEKIT_API_KEY}" \
     --api-secret "${LIVEKIT_API_SECRET}" \
     --output json 2>&1)
@@ -87,7 +93,7 @@ if [ $TRUNK_EXIT_CODE -eq 0 ]; then
     echo "✅ Trunk created successfully with ID: $TRUNK_ID"
     
     # Create dispatch rule with trunk ID
-    echo "📞 Creating dispatch rule..."
+    echo "📞 Creating dispatch rule for individual rooms..."
     cat > /tmp/dispatch.json << EOF
 {
   "rule": {
@@ -113,8 +119,8 @@ EOF
     echo "📋 Dispatch rule JSON content:"
     cat /tmp/dispatch.json
 
-    DISPATCH_RESULT=$(livekit-cli sip dispatch create /tmp/dispatch.json \
-        --url "${LIVEKIT_API_URL}" \
+    DISPATCH_RESULT=$(./livekit-cli sip dispatch create /tmp/dispatch.json \
+        --url "${LIVEKIT_URL}" \
         --api-key "${LIVEKIT_API_KEY}" \
         --api-secret "${LIVEKIT_API_SECRET}" \
         --output json 2>&1)
@@ -146,7 +152,7 @@ echo "🎯 CONFIGURATION SUMMARY:"
 echo "=========================="
 echo "📞 Phone Number: ${PHONE_NUMBER}"
 echo "🏠 Room Prefix: call-"
-echo "📍 SIP Endpoint: sip:${EXTERNAL_IP}:${SIP_PORT}"
+echo "📍 SIP Endpoint: sip:${EXTERNAL_IP}:5060"
 echo "✅ Trunk Status: ${TRUNK_STATUS}"
 echo "✅ Dispatch Rule Status: ${DISPATCH_STATUS}"
 
@@ -154,17 +160,28 @@ if [ "$TRUNK_STATUS" = "SUCCESS" ] && [ "$DISPATCH_STATUS" = "SUCCESS" ]; then
     echo ""
     echo "🎉 TWILIO SIP CONFIGURATION COMPLETE!"
     echo ""
+    echo "🔧 INDIVIDUAL ROOM SETUP:"
+    echo "========================"
+    echo "📞 Each call will create: call-<unique-id>"
+    echo "🤖 Agent will auto-join each new room"
+    echo "📍 SIP URI for Twilio: sip:${EXTERNAL_IP}:5060"
+    echo ""
     echo "🔧 NEXT STEPS:"
     echo "=============="
     echo "1. Configure Twilio phone number ${PHONE_NUMBER}"
-    echo "2. Set SIP URI: sip:${EXTERNAL_IP}:${SIP_PORT}"
+    echo "2. Set SIP URI: sip:${EXTERNAL_IP}:5060"
     echo "3. Test inbound calls - each will create room: call-<unique-id>"
     echo "4. Agent will auto-join each new call room"
-else
-    echo ""
-    echo "⚠️ SETUP INCOMPLETE - Manual intervention required"
-    echo "Check the error messages above and retry"
 fi
 
-echo ""
-echo "🏁 Twilio setup completed."
+# Start SIP service (foreground)
+echo "📞 Starting SIP Service..."
+echo "🌐 Twilio SIP Service ready:"
+echo "   - SIP Endpoint: 0.0.0.0:5060"
+echo "   - LiveKit API: 0.0.0.0:7880" 
+echo "   - Health Check: 0.0.0.0:8080"
+echo "   - Provider: Twilio"
+echo "   - Phone: ${PHONE_NUMBER} → call-<unique-id>"
+echo "   - External IP: ${EXTERNAL_IP}"
+
+exec ./sip --config config.yaml
