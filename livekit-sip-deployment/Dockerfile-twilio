@@ -28,7 +28,7 @@ RUN go mod download || true
 COPY . .
  
 # Build the SIP binary (static linking)
-WORKDIR /app/sip
+WORKDIR /app
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo \
     -ldflags '-w -s' \
     -o /app/sip-app ./cmd/livekit-sip
