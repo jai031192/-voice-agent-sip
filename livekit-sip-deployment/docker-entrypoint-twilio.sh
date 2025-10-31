@@ -63,17 +63,27 @@ EOF
 echo "📋 Trunk JSON content:"
 cat /tmp/trunk.json
 
-TRUNK_RESULT=$(/usr/local/bin/lk sip inbound create \
+# Check if LiveKit CLI is installed
+if [ -f "/usr/local/bin/livekit-cli" ]; then
+    LK_CLI="/usr/local/bin/livekit-cli"
+    echo "✅ Using existing LiveKit CLI"
+elif [ -f "/usr/local/bin/lk" ]; then
+    LK_CLI="/usr/local/bin/lk"
+    echo "✅ Using existing LiveKit CLI"
+else
+    echo "📦 Installing LiveKit CLI..."
+    curl -sSL https://github.com/livekit/livekit-cli/releases/download/v2.12.2/livekit-cli_2.12.2_linux_amd64.tar.gz | tar xz -C /tmp
+    mv /tmp/lk /usr/local/bin/lk
+    chmod +x /usr/local/bin/lk
+    LK_CLI="/usr/local/bin/lk"
+    echo "✅ LiveKit CLI installed successfully"
+fi
+
+TRUNK_RESULT=$($LK_CLI sip inbound create \
     --url "${LIVEKIT_URL}" \
     --api-key "${LIVEKIT_API_KEY}" \
     --api-secret "${LIVEKIT_API_SECRET}" \
     /tmp/trunk.json 2>&1)
-echo "⚠️  Skipping automatic trunk/dispatch setup due to CLI version changes"
-echo "ℹ️  The SIP service is running and ready to receive calls"
-echo "ℹ️  You can manually configure trunks and dispatch rules via LiveKit dashboard"
-
-TRUNK_STATUS="MANUAL"
-DISPATCH_STATUS="MANUAL"
 
 # # Delete any existing conflicting trunks for this number
 # echo "🗑️ Cleaning up any existing trunks for number ${PHONE_NUMBER}..."
@@ -154,7 +164,7 @@ EOF
         echo "📋 Dispatch rule JSON content:"
         cat /tmp/dispatch.json
 
-        DISPATCH_RESULT=$(/usr/local/bin/lk sip dispatch create \
+        DISPATCH_RESULT=$($LK_CLI sip dispatch create \
             --url "${LIVEKIT_URL}" \
             --api-key "${LIVEKIT_API_KEY}" \
             --api-secret "${LIVEKIT_API_SECRET}" \
