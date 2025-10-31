@@ -43,6 +43,31 @@ export PHONE_NUMBER="${PHONE_NUMBER:-+13074606119}"
 
 # Setup Twilio SIP configuration
 echo "📞 Setting up Twilio SIP configuration..."
+
+# Create trunk using JSON file format for Twilio
+echo "📞 Creating Twilio inbound trunk..."
+
+# Create trunk JSON file for Twilio
+cat > /tmp/trunk.json << EOF
+{
+  "trunk": {
+    "name": "Twilio Inbound SIP Trunk",
+    "numbers": [
+      "${PHONE_NUMBER}"
+    ],
+    "krispEnabled": true
+  }
+}
+EOF
+
+echo "📋 Trunk JSON content:"
+cat /tmp/trunk.json
+
+TRUNK_RESULT=$(/usr/local/bin/lk sip inbound create \
+    --url "${LIVEKIT_URL}" \
+    --api-key "${LIVEKIT_API_KEY}" \
+    --api-secret "${LIVEKIT_API_SECRET}" \
+    /tmp/trunk.json 2>&1)
 echo "⚠️  Skipping automatic trunk/dispatch setup due to CLI version changes"
 echo "ℹ️  The SIP service is running and ready to receive calls"
 echo "ℹ️  You can manually configure trunks and dispatch rules via LiveKit dashboard"
@@ -92,69 +117,74 @@ DISPATCH_STATUS="MANUAL"
 #     --project "$(echo ${LIVEKIT_API_KEY} | cut -d: -f1)" \
 #     --request /tmp/trunk.json 2>&1)
 
-# TRUNK_EXIT_CODE=$?
-# echo "📋 Trunk creation result (exit code: $TRUNK_EXIT_CODE):"
-# echo "$TRUNK_RESULT"
+TRUNK_EXIT_CODE=$?
+echo "📋 Trunk creation result (exit code: $TRUNK_EXIT_CODE):"
+echo "$TRUNK_RESULT"
 
-# # Commented out trunk creation logic due to CLI version changes
-# if [ $TRUNK_EXIT_CODE -eq 0 ]; then
-#     TRUNK_ID=$(echo "$TRUNK_RESULT" | jq -r '.sip_trunk_id // .trunkId // .id' 2>/dev/null)
-#     echo "✅ Trunk created successfully with ID: $TRUNK_ID"
-#     
-#     # Create dispatch rule with trunk ID
-#     echo "📞 Creating dispatch rule for individual rooms..."
-#     cat > /tmp/dispatch.json << EOF
-# {
-#   "rule": {
-#     "dispatchRuleIndividual": {
-#       "roomPrefix": "call-"
-#     }
-#   },
-#   "trunkIds": ["${TRUNK_ID}"],
-#   "name": "VA_dispatch_rule",
-#   "roomConfig": {
-#     "agents": [
-#       {
-#         "agentName": "Voice_Agent",
-#         "metadata": "{\"agent_type\": \"voice_assistant\"}"
-#       }
-#     ]
-#   },
-#   "hidePhoneNumber": false,
-#   "metadata": "provider=Twilio,type=voice_agent"
-# }
-# EOF
+# Process trunk creation result
+if [ $TRUNK_EXIT_CODE -eq 0 ]; then
+    TRUNK_ID=$(echo "$TRUNK_RESULT" | jq -r '.sip_trunk_id // .trunkId // .id' 2>/dev/null)
+    if [ "$TRUNK_ID" != "null" ] && [ -n "$TRUNK_ID" ]; then
+        echo "✅ Trunk created successfully with ID: $TRUNK_ID"
+        TRUNK_STATUS="SUCCESS"
+        
+        # Create dispatch rule with trunk ID using JSON format
+        echo "📞 Creating dispatch rule for individual rooms..."
+        
+        # Create dispatch rule JSON file for Twilio (matches all trunks by default)
+        cat > /tmp/dispatch.json << EOF
+{
+  "dispatch_rule": {
+    "rule": {
+      "dispatchRuleIndividual": {
+        "roomPrefix": "call-"
+      }
+    },
+    "name": "Twilio Individual Room Dispatch",
+    "roomConfig": {
+      "agents": [{
+        "agentName": "voice-agent",
+        "metadata": "Twilio inbound call handler"
+      }]
+    }
+  }
+}
+EOF
 
-#     echo "📋 Dispatch rule JSON content:"
-#     cat /tmp/dispatch.json
+        echo "📋 Dispatch rule JSON content:"
+        cat /tmp/dispatch.json
 
-#     DISPATCH_RESULT=$(/usr/local/bin/lk sip create-dispatch-rule \
-#         --url "${LIVEKIT_URL}" \
-#         --api-key "${LIVEKIT_API_KEY}" \
-#         --api-secret "${LIVEKIT_API_SECRET}" \
-#         --project "$(echo ${LIVEKIT_API_KEY} | cut -d: -f1)" \
-#         --request /tmp/dispatch.json 2>&1)
+        DISPATCH_RESULT=$(/usr/local/bin/lk sip dispatch create \
+            --url "${LIVEKIT_URL}" \
+            --api-key "${LIVEKIT_API_KEY}" \
+            --api-secret "${LIVEKIT_API_SECRET}" \
+            /tmp/dispatch.json 2>&1)
+        
+        DISPATCH_EXIT_CODE=$?
+        echo "📋 Dispatch rule creation result (exit code: $DISPATCH_EXIT_CODE):"
+        echo "$DISPATCH_RESULT"
 
-#     DISPATCH_EXIT_CODE=$?
-#     echo "📋 Dispatch rule creation result (exit code: $DISPATCH_EXIT_CODE):"
-#     echo "$DISPATCH_RESULT"
-
-#     if [ $DISPATCH_EXIT_CODE -eq 0 ]; then
-#         DISPATCH_ID=$(echo "$DISPATCH_RESULT" | jq -r '.sip_dispatch_rule_id // .dispatchRuleId // .id' 2>/dev/null)
-#         echo "✅ Dispatch rule created successfully with ID: $DISPATCH_ID"
-#         
-#         TRUNK_STATUS="SUCCESS"
-#         DISPATCH_STATUS="SUCCESS"
-#     else
-#         echo "❌ Dispatch rule creation failed"
-#         TRUNK_STATUS="SUCCESS"
-#         DISPATCH_STATUS="FAILED"
-#     fi
-# else
-#     echo "❌ Trunk creation failed"
-#     TRUNK_STATUS="FAILED"
-#     DISPATCH_STATUS="SKIPPED"
-# fi
+        if [ $DISPATCH_EXIT_CODE -eq 0 ]; then
+            DISPATCH_ID=$(echo "$DISPATCH_RESULT" | jq -r '.sip_dispatch_rule_id // .dispatchRuleId // .id' 2>/dev/null)
+            echo "✅ Dispatch rule created successfully with ID: $DISPATCH_ID"
+            
+            TRUNK_STATUS="SUCCESS"
+            DISPATCH_STATUS="SUCCESS"
+        else
+            echo "❌ Dispatch rule creation failed"
+            TRUNK_STATUS="SUCCESS"
+            DISPATCH_STATUS="FAILED"
+        fi
+    else
+        echo "❌ Failed to extract trunk ID from result"
+        TRUNK_STATUS="FAILED"
+        DISPATCH_STATUS="SKIPPED"
+    fi
+else
+    echo "❌ Trunk creation failed"
+    TRUNK_STATUS="FAILED"
+    DISPATCH_STATUS="SKIPPED"
+fi
 
 # Configuration summary
 echo ""
@@ -182,6 +212,10 @@ if [ "$TRUNK_STATUS" = "SUCCESS" ] && [ "$DISPATCH_STATUS" = "SUCCESS" ]; then
     echo "2. Set SIP URI: sip:${EXTERNAL_IP}:5060"
     echo "3. Test inbound calls - each will create room: call-<unique-id>"
     echo "4. Agent will auto-join each new call room"
+else
+    echo ""
+    echo "⚠️  Manual configuration required via LiveKit dashboard"
+    echo "    or use CLI commands to create trunk and dispatch rules"
 fi
 
 # Start SIP service (foreground)
