@@ -16,7 +16,7 @@ fi
 
 # Start LiveKit server in background
 echo "🎥 Starting LiveKit Server..."
-./livekit-server --config livekit-config.yaml &
+/usr/local/bin/livekit-server --config livekit-config.yaml &
 LIVEKIT_PID=$!
 sleep 10
 
@@ -46,7 +46,7 @@ echo "📞 Setting up Twilio SIP configuration..."
 
 # Delete any existing conflicting trunks for this number
 echo "🗑️ Cleaning up any existing trunks for number ${PHONE_NUMBER}..."
-EXISTING_TRUNKS=$(./livekit-cli sip list-trunk \
+EXISTING_TRUNKS=$(/usr/local/bin/livekit-cli sip list-trunk \
     --url "${LIVEKIT_URL}" \
     --api-key "${LIVEKIT_API_KEY}" \
     --api-secret "${LIVEKIT_API_SECRET}" \
@@ -56,7 +56,7 @@ if [ "$EXISTING_TRUNKS" != "[]" ] && [ -n "$EXISTING_TRUNKS" ]; then
     echo "$EXISTING_TRUNKS" | jq -r '.[] | select(.numbers[] == "'"$PHONE_NUMBER"'") | .sip_trunk_id' | while read -r trunk_id; do
         if [ -n "$trunk_id" ] && [ "$trunk_id" != "null" ]; then
             echo "🗑️ Deleting existing trunk: $trunk_id"
-            ./livekit-cli sip delete-trunk "$trunk_id" \
+            /usr/local/bin/livekit-cli sip delete-trunk "$trunk_id" \
                 --url "${LIVEKIT_URL}" \
                 --api-key "${LIVEKIT_API_KEY}" \
                 --api-secret "${LIVEKIT_API_SECRET}" || echo "⚠️ Failed to delete trunk $trunk_id"
@@ -78,7 +78,7 @@ cat /tmp/trunk.json
 
 # Create trunk
 echo "📞 Creating trunk..."
-TRUNK_RESULT=$(./livekit-cli sip inbound create /tmp/trunk.json \
+TRUNK_RESULT=$(/usr/local/bin/livekit-cli sip inbound create /tmp/trunk.json \
     --url "${LIVEKIT_URL}" \
     --api-key "${LIVEKIT_API_KEY}" \
     --api-secret "${LIVEKIT_API_SECRET}" \
@@ -119,7 +119,7 @@ EOF
     echo "📋 Dispatch rule JSON content:"
     cat /tmp/dispatch.json
 
-    DISPATCH_RESULT=$(./livekit-cli sip dispatch create /tmp/dispatch.json \
+    DISPATCH_RESULT=$(/usr/local/bin/livekit-cli sip dispatch create /tmp/dispatch.json \
         --url "${LIVEKIT_URL}" \
         --api-key "${LIVEKIT_API_KEY}" \
         --api-secret "${LIVEKIT_API_SECRET}" \
@@ -184,4 +184,4 @@ echo "   - Provider: Twilio"
 echo "   - Phone: ${PHONE_NUMBER} → call-<unique-id>"
 echo "   - External IP: ${EXTERNAL_IP}"
 
-exec ./sip --config config.yaml
+exec /app/sip-app --config config.yaml
