@@ -1,18 +1,20 @@
 version: '3.8'
 
 services:
-  livekit-sip-twilio:
+  voice-agent-sip-twilio:
     build: 
       context: ../
       dockerfile: livekit-sip-deployment/Dockerfile-twilio
-    container_name: voice-agent-sip-container
+    image: voice-agent-sip:twilio-latest
+    container_name: voice-agent-sip-twilio
     restart: unless-stopped
     ports:
       - "5060:5060/tcp"    # SIP TCP
       - "5060:5060/udp"    # SIP UDP
-      - "7880:7880/tcp"    # LiveKit API (if needed)
+      - "7880:7880/tcp"    # LiveKit API
       - "8080:8080/tcp"    # Health check
       - "9090:9090/tcp"    # Metrics
+      - "6379:6379/tcp"    # Redis
       - "6000-6100:6000-6100/udp"  # RTP range for SIP
     
     environment:

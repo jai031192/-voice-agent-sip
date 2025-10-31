@@ -1,95 +1,107 @@
 # ---------- BUILD STAGE ----------
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24-bullseye AS builder
+
+# Cache bust argument - change this to force rebuild
+ARG CACHEBUST=1
+RUN echo "Build timestamp: $(date)" 
  
 # Install build dependencies
-RUN apk add --no-cache \
-    build-base \
-    pkgconfig \
-    opus-dev \
-    opusfile-dev \
-    soxr-dev \
-    libsamplerate-dev \
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libopus-dev \
+    libopusfile-dev \
+    libsoxr0 libsoxr-dev \
+    libsamplerate0-dev \
     git \
+    jq \
     wget \
     curl \
     bash \
-    jq
+&& rm -rf /var/lib/apt/lists/*
  
 # Set working directory
 WORKDIR /app
  
-# Copy Go module files
-COPY go.mod ./
+# Install LiveKit CLI and Server using the official installer (working method)
+RUN curl -sSL https://get.livekit.io/cli | bash
+RUN curl -sSL https://get.livekit.io | bash && \
+    ls -la /usr/local/bin/livekit* && \
+    which livekit-server && \
+    livekit-server --version
  
-# Download dependencies
+# Copy Go module files and download dependencies
+COPY go.mod ./
 RUN go mod download || true
  
 # Copy source code
 COPY . .
  
-# Build the SIP binary (static linking)
-WORKDIR /app
+# Build the SIP binary
 RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo \
     -ldflags '-w -s' \
     -o /app/sip-app ./cmd/livekit-sip
-
-# Build LiveKit CLI - try different version that works
-WORKDIR /app
-RUN go install github.com/livekit/livekit-cli@v1.4.2 && \
-    cp $(go env GOPATH)/bin/livekit-cli /app/livekit-cli
-
-# Build LiveKit server - use compatible version
-RUN go install github.com/livekit/livekit@v1.5.2 && \
-    cp $(go env GOPATH)/bin/livekit /app/livekit-server
  
-# Make them executable
-RUN chmod +x /app/sip-app /app/livekit-cli /app/livekit-server
+# Make binaries executable
+RUN chmod +x /app/sip-app
  
 # ---------- RUNTIME STAGE ----------
-FROM alpine:latest
+FROM ubuntu:24.04
  
-# Install runtime dependencies
-RUN apk add --no-cache \
-    opus \
-    opusfile \
-    soxr \
-    libsamplerate \
-    redis \
+# Install runtime dependencies + Redis
+RUN apt-get update && apt-get install -y \
+    opus-tools \
+    libopus-dev \
+    libopusfile-dev \
+    libsoxr0 \
+    libsamplerate0 \
+    redis-server \
     ca-certificates \
     tzdata \
     wget \
     curl \
     bash \
-    jq
+    jq \
+    supervisor \
+&& rm -rf /var/lib/apt/lists/*
  
 # Create a non-root user
-RUN addgroup -g 1001 -S livekit && adduser -u 1001 -S livekit -G livekit
+RUN groupadd -g 1001 livekit && useradd -u 1001 -g livekit -m livekit
  
 # Set working directory
 WORKDIR /app
  
-# Copy binaries from builder
-COPY --from=builder /app/sip-app /app/sip
-COPY --from=builder /app/livekit-cli /app/livekit-cli
-COPY --from=builder /app/livekit-server /app/livekit-server
- 
-# Copy config and entrypoint
-COPY config.yaml livekit-config.yaml ./
-COPY livekit-sip-deployment/docker-entrypoint-twilio.sh /app/docker-entrypoint.sh
+# Copy SIP binary, LiveKit server, and LiveKit CLI from builder
+COPY --from=builder /app/sip-app /app/sip-app
+COPY --from=builder /usr/local/bin/livekit-server /usr/local/bin/livekit-server
+COPY --from=builder /usr/local/bin/livekit-cli /usr/local/bin/livekit-cli
 
-# Make scripts executable
-RUN chmod +x /app/sip /app/docker-entrypoint.sh /app/livekit-cli /app/livekit-server
+# Ensure PATH includes LiveKit binaries
+ENV PATH="/usr/local/bin:${PATH}"
  
-# Switch to non-root user
-USER livekit
+# Copy config files
+COPY config.yaml /app/config.yaml
+COPY livekit-config.yaml /app/livekit-config.yaml
+
+# Create startup script for Twilio
+COPY livekit-sip-deployment/docker-entrypoint-twilio.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
  
-# Expose required ports
-EXPOSE 5060/tcp 5060/udp 7880/tcp 8080/tcp 6000-6100/udp
+# Make binaries executable and verify they exist
+RUN chmod +x /app/sip-app && \
+    ls -la /app/sip-app && \
+    ls -la /usr/local/bin/livekit-server && \
+    ls -la /usr/local/bin/livekit-cli && \
+    chmod +x /usr/local/bin/livekit-server && \
+    chmod +x /usr/local/bin/livekit-cli
+ 
+# Expose ports
+EXPOSE 5060/tcp 5060/udp 7880/tcp 8080/tcp 6379/tcp 9090/tcp 6000-65531/udp
  
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
- 
+
 # Environment variables for Twilio setup
 ENV LIVEKIT_URL=http://localhost:7880
 ENV LIVEKIT_API_KEY=108378f337bbab3ce4e944554bed555a
@@ -97,5 +109,5 @@ ENV LIVEKIT_API_SECRET=2098a695dcf3b99b4737cca8034b122fb86ca9f904c13be1089181c0a
 ENV EXTERNAL_IP=40.81.229.194
 ENV PHONE_NUMBER=+13074606119
  
-# Entrypoint
+# Use Twilio entrypoint
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
