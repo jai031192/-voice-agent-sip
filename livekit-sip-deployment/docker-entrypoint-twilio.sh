@@ -133,7 +133,12 @@ echo "$TRUNK_RESULT"
 
 # Process trunk creation result
 if [ $TRUNK_EXIT_CODE -eq 0 ]; then
-    TRUNK_ID=$(echo "$TRUNK_RESULT" | jq -r '.sip_trunk_id // .trunkId // .id' 2>/dev/null)
+    # Try to extract trunk ID from different output formats
+    TRUNK_ID=$(echo "$TRUNK_RESULT" | grep -oE "SIPTrunkID: [A-Za-z0-9_]+" | cut -d: -f2 | tr -d ' ')
+    if [ -z "$TRUNK_ID" ]; then
+        # Fallback to JSON format
+        TRUNK_ID=$(echo "$TRUNK_RESULT" | jq -r '.sip_trunk_id // .trunkId // .id' 2>/dev/null)
+    fi
     if [ "$TRUNK_ID" != "null" ] && [ -n "$TRUNK_ID" ]; then
         echo "✅ Trunk created successfully with ID: $TRUNK_ID"
         TRUNK_STATUS="SUCCESS"
